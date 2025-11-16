@@ -314,5 +314,3 @@ def wf_dsm_mart_dsm_sale_data():
 
 # Инициализация DAG
 wf_dsm_mart_dsm_sale_data()
-
-#что-то новое
