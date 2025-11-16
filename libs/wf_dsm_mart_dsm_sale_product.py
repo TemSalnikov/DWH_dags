@@ -76,6 +76,7 @@ def wf_dsm_mart_dsm_sale_product():
         message = f'Нет новых данных для загрузки в {tgt_table_name}'
 
         oracle_query = f"""SELECT distinct * from {src_table_name}"""
+        ch_client = None
 
         try:
             with get_oracle_connection() as oracle_conn:
@@ -91,7 +92,7 @@ def wf_dsm_mart_dsm_sale_product():
                     df_oracle.columns = [col.lower() for col in df_oracle.columns]
 
                     ch_client = get_clickhouse_client()
-                    df_click = pd.DataFrame(ch_client.execute(f"""select cd_u from {tgt_table_name}"""), columns=pk_list) # прове
+                    df_click = pd.DataFrame(ch_client.execute(f"""select {', '.join(pk_list)} from {tgt_table_name}"""), columns=pk_list) # прове
                     
 
                     # 3. Выбор строк в Oracle, кот. отсутствуют в ClickHouse
@@ -188,7 +189,8 @@ def wf_dsm_mart_dsm_sale_product():
             logger.error(f"Ошибка при проверке новых данных в {src_table_name}: {str(e)}")
             raise
         finally:
-            ch_client.disconnect()
+            if ch_client:
+                ch_client.disconnect()
 
     @task
     def load_altay_dict(*args, **kwargs):
