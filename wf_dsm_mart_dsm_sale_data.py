@@ -76,40 +76,13 @@ def compute_row_hash(row, columns=None):
 # Настройка логирования
 logger = LoggingMixin().log
 
-# Деление временного интервала по месяцам
-def split_date_range(start_date, end_date, chunk_months=1):
-    """Разбивает временной интервал на месячные chunks"""
-    periods = []
-    current = pendulum.parse(start_date)
-    end_dt = pendulum.parse(end_date)
-    
-    # переделать на одну дату. в between в самый первый период прогружается сразу два месяца, можно упростить до одной даты - месяца
-    while current < end_dt:
-        period_end = min(current.add(months=chunk_months), end_dt)
-        periods.append({
-            'start': current.to_date_string(),
-            'end': period_end.to_date_string()
-        })
-        current = period_end
-    
-    return periods
-
 @dag(
     dag_id='wf_dsm_mart_dsm_sale_data',
-    schedule_interval='0 9 6 * *', # в 9 утра каждого месяца 6 числа
     start_date=days_ago(1),
-    #default_args=default_args,
     catchup=False,
     params={
-        'dates_from': Param(
-            (datetime.now() - timedelta(days=1)).replace(day=1).strftime("%Y-%m-%d"),
-            type='string',
-            description='Дата начала отчетного периода в формате YYYY-MM-01. Указывать тот месяц, за который требуется отчет. Если требуется прогрузка за 1 месяц, поле "dates_to" оставить пустым.'
-        ),
-        'dates_to': Param(
-            '-',
-            type='string',
-            description='Дата окончания отчетного периода в формате YYYY-MM-01.'
+        'loading_month': Param( # месяц прогрузки проверить в управляющем потоке типы дат и форматы
+            type='string'
         )
     },
     tags=['oracle', 'clickhouse', 'data_migration']
@@ -129,36 +102,23 @@ def wf_dsm_mart_dsm_sale_data():
         # Получаем параметр периода дат из контекста
         dag_run = kwargs.get('dag_run')
         if dag_run and dag_run.conf:
-            report_date_from = dag_run.conf.get('dates_from')
-            report_date_to = dag_run.conf.get('dates_to')
-
-            logger.info(f"Введены даты прогрузки данных, где dates_from = {report_date_from}, dates_to: {report_date_to}.")
-
-            if report_date_to == '-':
-                periods = [{'start': report_date_from, 'end':report_date_from}]
-                logger.info(f"Будет загружен 1 период: {report_date_from}")
-            else:
-                periods = split_date_range(report_date_from, report_date_to, chunk_months=1)
-                logger.info(f"Будет загружено {len(periods)} периодов:")
-                for i, period in enumerate(periods):
-                    logger.info(f"Период {i+1}: {period['start']} - {period['end']}")
-        return periods
-                
+            loading_month = dag_run.conf.get('loading_month')
+            logger.info(f"Введены даты прогрузки данных, где loading_month = {loading_month}")              
 
     @task.short_circuit(pool='sequential_processing', pool_slots=1) # декоратор для условного последовательного выполнения
     def check_new_data_altay_data(period, **kwargs):
         """Проверка наличия новых данных из V$ALTAY_DATA """
         tmp_table_name = f"tmp.tmp_{tgt_table_name}_{uuid.uuid4().hex}" # Название для временной таблицы
 
-        report_date_from = period['start']
+        loading_month = period['start']
         report_date_to = period['end']
-        period_str = f"{report_date_from} - {report_date_to}"
+        period_str = f"{loading_month} - {report_date_to}"
         logger.info(f"___________ПЕРИОД: {period_str}__________")
 
-        oracle_query = f"""SELECT distinct * from {src_table_name} where to_char(stat_date, 'yyyy-mm-dd') between :report_date_from and :report_date_to""" 
+        oracle_query = f"""SELECT distinct * from {src_table_name} where to_char(stat_date, 'yyyy-mm-dd') between :loading_month and :report_date_to""" 
         
         try:
-            params = {'report_date_from': report_date_from, 'report_date_to': report_date_to}
+            params = {'loading_month': loading_month, 'report_date_to': report_date_to}
             ch_client = None
 
             with get_oracle_connection() as oracle_conn:
@@ -240,7 +200,7 @@ def wf_dsm_mart_dsm_sale_data():
                         # 5.2. Вставка дельты
                         ch_client.insert_dataframe(f"INSERT INTO {tmp_table_name} VALUES", df_for_insert, settings=dict(use_numpy=True))
                         logger.info(f"Найдено {diff_rows.shape[0]} новых записей в {tmp_table_name}")
-                        return {'tmp_table_name': tmp_table_name, 'report_date_from': report_date_from, 'report_date_to': report_date_to}
+                        return {'tmp_table_name': tmp_table_name, 'loading_month': loading_month, 'report_date_to': report_date_to}
         except AirflowSkipException:
         # Пробрасываем исключение пропуска дальше
             raise
@@ -259,7 +219,7 @@ def wf_dsm_mart_dsm_sale_data():
         if not datas:
             raise AirflowSkipException("Пропускаем загрузку - нет данных от проверки")
 
-        report_date_from = datas['report_date_from']
+        loading_month = datas['loading_month']
         report_date_to = datas['report_date_to']
         tmp_table_name = datas['tmp_table_name']
 
@@ -274,19 +234,19 @@ def wf_dsm_mart_dsm_sale_data():
             diff_rows = df_tmp.merge(df_fact[pk_list], on=pk_list, how='left', indicator=True).query('_merge == "left_only"').drop('_merge', axis=1)
 
             if diff_rows.empty:
-                logger.info(f"Успешно загружены все записи. {len(df_tmp)} записей в {tgt_table_name} за пероид {report_date_from} - {report_date_to}.")
+                logger.info(f"Успешно загружены все записи. {len(df_tmp)} записей в {tgt_table_name} за пероид {loading_month} - {report_date_to}.")
                 return tmp_table_name 
-                #{'message': f"Удалена временная таблица {tmp_table_name} для прогрузки пероида {report_date_from} - {report_date_to}."}
+                #{'message': f"Удалена временная таблица {tmp_table_name} для прогрузки пероида {loading_month} - {report_date_to}."}
             else:
                 class NotAllDatasLoad(Exception):
                     pass
                 raise NotAllDatasLoad
         except NotAllDatasLoad as n:
             ch_client.execute(f"drop table {tmp_table_name}")
-            logger.error(f"Не все данные прогружены из {tmp_table_name} в {tgt_table_name}. Прогружено {df_tmp.shape[0]-diff_rows.shape[0]} из {df_tmp.shape[0]} за пероид {report_date_from} - {report_date_to}.")
+            logger.error(f"Не все данные прогружены из {tmp_table_name} в {tgt_table_name}. Прогружено {df_tmp.shape[0]-diff_rows.shape[0]} из {df_tmp.shape[0]} за пероид {loading_month} - {report_date_to}.")
         except Exception as e:
             ch_client.execute(f"drop table {tmp_table_name}")
-            logger.error(f"Ошибка при загрузке {tgt_table_name}: {str(e)} за пероид {report_date_from} - {report_date_to}")
+            logger.error(f"Ошибка при загрузке {tgt_table_name}: {str(e)} за пероид {loading_month} - {report_date_to}")
         finally:
             ch_client.disconnect()
     
