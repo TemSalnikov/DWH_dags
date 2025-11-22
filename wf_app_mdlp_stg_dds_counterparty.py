@@ -518,20 +518,20 @@ def wf_app_mdlp_stg_dds_counterparty():
     
     # Генерация суррогатных ключей для контрагентов (по inn_code)
     generate_counterparty_sur_key_task = tg_sur.hub_load_processing_tasks(
-        hub_table_name=hub_counterparty_table,
-        source_table=union_table_task,
-        bk_column='inn_code',
-        sur_key_column='counterparty_pk',
-        business_key_column='counterparty_id'
+        hub_counterparty_table,
+        union_table_task,
+        'inn_code',
+        'counterparty_pk',
+        'counterparty_id'
     )
     
     # Генерация суррогатных ключей для точек продаж (по составному ключу)
     generate_salepoint_sur_key_task = tg_sur.hub_load_processing_tasks(
-        hub_table_name=hub_salepoint_table,
-        source_table=union_table_task,
-        bk_column='salepoint_business_key',
-        sur_key_column='counterparty_salepoint_pk',
-        business_key_column='counterparty_salepoint_id'
+        hub_salepoint_table,
+        union_table_task,
+        'salepoint_business_key',
+        'counterparty_salepoint_pk',
+        'counterparty_salepoint_id'
     )
     
     # Объединение суррогатных ключей из двух хабов
