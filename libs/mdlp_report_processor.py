@@ -37,6 +37,28 @@ def translate_columns(columns):
             translated.append(col)
     return translated
 
+def translate_columns(report_type: str):
+    match  report_type:
+        case "GENERAL_PRICING_REPORT":
+            return ['tin_to_the_issuer', 'the_name_of_the_issuer', 'code_of_the_subject_of_the_russian_federation', 'the_subject_of_the_russian_federation', 
+                    'tin_of_the_participant', 'name_of_the_participant', 'mnn', 'trade_name', 'gtin', 'the_number_of_points_of_sales', 'sales_volume_units', 
+                    'meduvented_price_rub', 'source_of_financing', 'data_update_date', 'type_report', 'date_to', 'create_dttm', 'deleted_flag', 'uuid_report']
+        case "GENERAL_REPORT_ON_MOVEMENT":
+            return ['the_date_of_the_operation', 'tin_to_the_issuer', 'the_name_of_the_issuer', 'mnn', 'trade_name', 'gtin', 'series', 'operation_number', 
+                    'tin_of_the_sender', 'name_of_the_sender', 'identifier_md_of_the_sender', 'tin_of_the_recipient', 'name_of_the_recipient', 'identifier_md_of_the_recipient', 
+                    'quantity_units', 'source_of_financing', 'data_update_date', 'type_report', 'date_to', 'create_dttm', 'deleted_flag', 'uuid_report']
+        case "GENERAL_REPORT_ON_REMAINING_ITEMS":
+            return ['tin_to_the_issuer', 'the_name_of_the_issuer', 'code_of_the_subject_of_the_russian_federation', 'the_subject_of_the_russian_federation', 
+                    'settlement', 'district', 'tin_of_the_participant', 'name_of_the_participant', 'identifier_md_participant', 'address', 'mnn', 'trade_name', 
+                    'gtin', 'series', 'best_before_date', 'remains_in_the_market_units', 'remains_before_the_input_in_th_units', 'general_residues_units', 
+                    'source_of_financing', 'data_update_date', 'remains_in_the_market_excluding_705_unitary_enterprise', 'shipped', 'type_report', 'date_to', 
+                    'create_dttm', 'deleted_flag', 'uuid_report']
+        case "GENERAL_REPORT_ON_DISPOSAL":
+            return ['date_of_disposal', 'tin_to_the_issuer', 'the_name_of_the_issuer', 'code_of_the_subject_of_the_russian_federation', 
+                    'the_subject_of_the_russian_federation', 'settlement', 'district', 'tin_of_the_participant', 'name_of_the_participant', 
+                    'identifier_md_participant', 'address', 'mnn', 'trade_name', 'gtin', 'series', 'best_before_date', 'type_of_disposal', 'the_volume_of_diving_units', 
+                    'source_of_financing', 'data_update_date', 'type_of_export', 'completeness_of_disposal', 'type_report', 'date_to', 'create_dttm', 'deleted_flag', 'uuid_report']
+
 def extract_report(zip_path):
     try:
         # Извлечение из архива
@@ -67,6 +89,9 @@ def check_data_inreport(csv_path):
         # raise
         return False
     return True
+
+
+
 
 def process_report(csv_path, report_type, date_to):
     """Обработка отчёта: извлечение, преобразование и отправка в Kafka"""
@@ -104,7 +129,7 @@ def process_report(csv_path, report_type, date_to):
         print(f'columns under translate: {df.columns}')
         
         # Перевод названий столбцов
-        columns= translate_columns(df.columns)
+        columns= translate_columns(report_type)
         print(f'columns after translate: {columns}')
         df.columns = columns
         

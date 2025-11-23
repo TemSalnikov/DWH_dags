@@ -308,3 +308,158 @@ def save_meta(processed_dttm: str, stg_processed_dttm: str, **context):
     finally:
         if conn:
             conn.close()
+
+
+@task
+def create_ngram_fuzzy_missing_table(
+    source_table: str,
+    hub_table: str,
+    src_pk: str,
+    hub_id: str,
+    hub_pk: str,
+    threshold: float = 0.35  # Чем меньше, тем больше сходство. Обычно 0.3–0.5.
+) -> str:
+    """
+    Создаёт временную таблицу с записями из source_table,
+    которых нет в hub_table по fuzzy-сравнению hub_id через ngramDistance.
+    """
+    client = None
+    logger = LoggingMixin().log
+    tmp_table_name = f"tmp.tmp_fuzzy_missing_{source_table}_{uuid.uuid4().hex}"
+
+    try:
+        client = Client(**CLICKHOUSE_CONN)
+        logger.info(f"Сравнение {source_table} и {hub_table} по ngramDistance")
+
+        query = f"""
+        CREATE TABLE {tmp_table_name}
+        ENGINE = MergeTree()
+        PRIMARY KEY ({src_pk})
+        ORDER BY ({src_pk})
+        AS
+        WITH ranked AS (
+            SELECT
+                s.{src_pk} AS src_key,
+                s.src AS src,
+                s.effective_dttm AS effective_dttm,
+                h.{hub_id} AS hub_key,
+                ngramDistanceUTF8(s.{src_pk}, h.{hub_id}) AS dist
+            FROM {source_table} s
+            LEFT JOIN {hub_table} h ON h.deleted_flg = 0
+        ),
+        best_match AS (
+            SELECT
+                src_key,
+                src,
+                effective_dttm,
+                min(dist) AS min_dist
+            FROM ranked
+            GROUP BY src_key, src, effective_dttm
+        )
+        SELECT
+            src_key AS {src_pk},
+            src,
+            effective_dttm
+        FROM best_match
+        WHERE min_dist > {threshold} OR min_dist IS NULL
+        """
+
+        logger.info(f"Создаём таблицу: {tmp_table_name}")
+        client.execute(query)
+
+        count = client.execute(f"SELECT count() FROM {tmp_table_name}")[0][0]
+        logger.info(f"Добавлено {count} строк в {tmp_table_name}")
+
+        return tmp_table_name
+
+    except Exception as e:
+        logger.error(f"Ошибка: {e}")
+        raise
+    finally:
+        if client:
+            client.disconnect()
+            logger.debug("Подключение к ClickHouse закрыто")
+
+
+@task
+def fuzzy_join_with_hub(
+    source_table: str,
+    hub_table: str,
+    src_pk: str,
+    hub_id: str,
+    hub_pk: str,
+    threshold: float = 0.35
+) -> str:
+    """
+    Делает нечеткий джоин источника с хабом по hub_id
+    и создает таблицу с лучшими fuzzy совпадениями.
+    """
+
+    client = None
+    logger = LoggingMixin().log
+    tmp_join_table = f"tmp.tmp_fuzzy_join_{source_table}_{uuid.uuid4().hex}"
+
+    try:
+        client = Client(**CLICKHOUSE_CONN)
+        logger.info(f"Выполняю fuzzy JOIN {source_table} → {hub_table}")
+
+        query = f"""
+        CREATE TABLE {tmp_join_table}
+        ENGINE = MergeTree()
+        PRIMARY KEY ({src_pk})
+        ORDER BY ({src_pk})
+        AS
+        WITH ranked AS (
+            SELECT
+                s.{src_pk} AS src_key,
+                s.src AS src,
+                s.effective_dttm AS effective_dttm,
+
+                h.{hub_pk} AS hub_pk,
+                h.{hub_id} AS hub_key,
+                h.effective_from_dttm AS hub_eff_from,
+                h.effective_to_dttm AS hub_eff_to,
+
+                ngramDistanceUTF8(s.{src_pk}, h.{hub_id}) AS dist
+            FROM {source_table} s
+            LEFT JOIN {hub_table} h
+                ON h.deleted_flg = 0
+        ),
+        best AS (
+            SELECT
+                src_key,
+                src,
+                effective_dttm,
+                argMin(hub_pk, dist) AS best_hub_pk,
+                argMin(hub_key, dist) AS best_hub_id,
+                min(dist) AS best_dist
+            FROM ranked
+            GROUP BY src_key, src, effective_dttm
+        )
+        SELECT
+            src_key AS {src_pk},
+            src,
+            effective_dttm,
+
+            best_hub_pk,
+            best_hub_id,
+            best_dist,
+            best_dist <= {threshold} AS match_ok
+        FROM best
+        """
+
+        logger.info(f"Создаю таблицу fuzzy join: {tmp_join_table}")
+        client.execute(query)
+
+        count = client.execute(f"SELECT count() FROM {tmp_join_table}")[0][0]
+        logger.info(f"Получено {count} сопоставлений во временную таблицу {tmp_join_table}")
+
+        return tmp_join_table
+
+    except Exception as e:
+        logger.error(f"[fuzzy_join_with_hub] Ошибка: {e}")
+        raise
+    finally:
+        if client:
+            client.disconnect()
+            logger.debug("Подключение закрыто")
