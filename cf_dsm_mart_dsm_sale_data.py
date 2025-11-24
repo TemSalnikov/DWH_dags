@@ -12,6 +12,7 @@ import uuid
 from airflow.exceptions import AirflowSkipException
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 import psycopg2
+import libs.functions_dwh.functions_dsm
 
 # Настройка логирования
 logger = LoggingMixin().log
