@@ -95,7 +95,7 @@ def cf_dsm_mart_dsm_sale_data():
                     new_start_dt_loading = today.substract(months=2)
                     logger.info(f"В метаданных таблицы airflow.public.meta_dsm еще не было прогрузок. Запуск прогрузки данных за последние два месяца: dates_from = {new_start_dt_loading.format('YYYY-MM-DD')}, dates_to: {today.format('YYYY-MM-DD')}.")
                 
-                periods = split_date_range(new_start_dt_loading, today)
+                periods = check_and_split_date_range(new_start_dt_loading, today)
                 logger.info(f"Будет загружено {len(periods)} месяцев:")
                 for i, period in enumerate(periods):
                     logger.info(f"Месяц {i+1}: {period}")
@@ -104,7 +104,7 @@ def cf_dsm_mart_dsm_sale_data():
                 logger.info(f"Будет загружен 1 месяц: {report_date_from}")
             else:
                 logger.info(f"Введены даты прогрузки данных, где dates_from = {report_date_from}, dates_to: {report_date_to}.")
-                periods = split_date_range(report_date_from, report_date_to)
+                periods = check_and_split_date_range(report_date_from, report_date_to)
                 logger.info(f"Будет загружено {len(periods)} месяцев:")
                 for i, period in enumerate(periods):
                     logger.info(f"Месяц {i+1}: {period}")
