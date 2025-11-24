@@ -15,12 +15,14 @@ import libs.functions_dwh.functions_dsm
 # Настройка логирования
 logger = LoggingMixin().log
 
+
 @dag(
     dag_id='wf_dsm_mart_dsm_sale_data',
     start_date=days_ago(1),
     catchup=False,
     params={
-        'loading_month': Param( # добвить тип = дата и проверить как используется потом в sql-запросах 
+        'loading_month': Param(
+            '1900-01-01', 
             type='string'
         )
     },
