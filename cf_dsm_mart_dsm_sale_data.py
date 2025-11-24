@@ -13,6 +13,8 @@ from airflow.exceptions import AirflowSkipException
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 import psycopg2
 
+# Настройка логирования
+logger = LoggingMixin().log
 
 # Деление временного интервала по месяцам
 def check_and_split_date_range(start_date, end_date):
