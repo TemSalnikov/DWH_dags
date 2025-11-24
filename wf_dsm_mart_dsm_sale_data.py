@@ -10,68 +10,7 @@ from airflow.models import Param
 import pendulum
 import uuid
 from airflow.exceptions import AirflowSkipException
-
-ORACLE_CONN = {
-    'user': 'ALTAYV',
-    'password': 'sSwM913_xoAY', 
-    'host': 'dsmviewer.ru',
-    'port': 27091,
-    'sid': 'webiasdb2'
-}
-
-CLICKHOUSE_CONN: dict[str, str | int] = {
-    'host': '192.168.14.235',
-    'port': 9001,
-    'user': 'admin',
-    'password': 'admin',
-    'database': 'stg'
-}
-
-# Функции подключения к БД
-def get_oracle_connection():
-    dsn = f"{ORACLE_CONN['host']}:{ORACLE_CONN['port']}/{ORACLE_CONN['sid']}"
-    return oracledb.connect(
-        user=ORACLE_CONN['user'],
-        password=ORACLE_CONN['password'],
-        dsn=dsn
-    )
-
-def get_clickhouse_client() -> Client:
-    """Создает и возвращает клиент ClickHouse"""
-    return Client(
-        host=CLICKHOUSE_CONN['host'],
-        port=CLICKHOUSE_CONN['port'],
-        user=CLICKHOUSE_CONN['user'],
-        password=CLICKHOUSE_CONN['password'],
-        database=CLICKHOUSE_CONN['database']
-    )
-# Функции подключения к БД
-def get_oracle_connection():
-    dsn = f"{ORACLE_CONN['host']}:{ORACLE_CONN['port']}/{ORACLE_CONN['sid']}"
-    return oracledb.connect(
-        user=ORACLE_CONN['user'],
-        password=ORACLE_CONN['password'],
-        dsn=dsn
-    )
-
-def get_clickhouse_client() -> Client:
-    """Создает и возвращает клиент ClickHouse"""
-    return Client(
-        host=CLICKHOUSE_CONN['host'],
-        port=CLICKHOUSE_CONN['port'],
-        user=CLICKHOUSE_CONN['user'],
-        password=CLICKHOUSE_CONN['password'],
-        database=CLICKHOUSE_CONN['database']
-    )
-
-def compute_row_hash(row, columns=None):
-    """Создает хеш строки"""
-    if columns:
-        row = row[columns]
-    # Преобразуем все значения строки в строки и объединяем их
-    row_string = ''.join(str(value) for value in row)
-    # Создаем хеш используя SHA-256
-    return hashlib.sha256(row_string.encode()).hexdigest()
+import libs.functions_dwh.functions_dsm
 
 # Настройка логирования
 logger = LoggingMixin().log
@@ -81,7 +20,7 @@ logger = LoggingMixin().log
     start_date=days_ago(1),
     catchup=False,
     params={
-        'loading_month': Param( # месяц прогрузки проверить в управляющем потоке типы дат и форматы
+        'loading_month': Param( # добвить тип = дата и проверить как используется потом в sql-запросах 
             type='string'
         )
     },
@@ -90,35 +29,31 @@ logger = LoggingMixin().log
 def wf_dsm_mart_dsm_sale_data():
         
     src_table_name = 'DATA_MART."V$ALTAY_DATA"' #название таблицы-источника
-    tgt_table_name = 'mart_dsm_sale' # название целевой таблицы
+    tgt_table_name = 'stg.mart_dsm_sale' # название целевой таблицы
     pk_list = ['cd_reg', 'cd_u', 'stat_year', 'stat_month', 'sales_type_id'] # список полей PK источника
     
     message = f'Нет новых данных для загрузки в {tgt_table_name}'
 
     @task
-    def get_loading_periods(*args, **kwargs):
+    def get_loading_period(*args, **kwargs):
         """Определение периодов для загрузки на основе параметров"""
         
-        # Получаем параметр периода дат из контекста
+        # Получаем параметр месяца прогрузки из контекста
         dag_run = kwargs.get('dag_run')
         if dag_run and dag_run.conf:
             loading_month = dag_run.conf.get('loading_month')
-            logger.info(f"Введены даты прогрузки данных, где loading_month = {loading_month}")              
-
-    @task.short_circuit(pool='sequential_processing', pool_slots=1) # декоратор для условного последовательного выполнения
-    def check_new_data_altay_data(period, **kwargs):
+            logger.info(f"Введена дата прогрузки данных, где loading_month = {loading_month}")              
+            return loading_month
+        
+    @task.short_circuit # (pool='sequential_processing', pool_slots=1) # декоратор для условного последовательного выполнения
+    def check_new_data_altay_data(loading_month, **kwargs):
         """Проверка наличия новых данных из V$ALTAY_DATA """
         tmp_table_name = f"tmp.tmp_{tgt_table_name}_{uuid.uuid4().hex}" # Название для временной таблицы
-
-        loading_month = period['start']
-        report_date_to = period['end']
-        period_str = f"{loading_month} - {report_date_to}"
-        logger.info(f"___________ПЕРИОД: {period_str}__________")
-
-        oracle_query = f"""SELECT distinct * from {src_table_name} where to_char(stat_date, 'yyyy-mm-dd') between :loading_month and :report_date_to""" 
+        logger.info(f"___________Дата прогрузки: {loading_month}__________")
+        oracle_query = f"""SELECT * from {src_table_name} where to_char(stat_date, 'yyyy-mm-dd') = :loading_month""" 
         
         try:
-            params = {'loading_month': loading_month, 'report_date_to': report_date_to}
+            params = {'loading_month': loading_month}
             ch_client = None
 
             with get_oracle_connection() as oracle_conn:
@@ -146,8 +81,9 @@ def wf_dsm_mart_dsm_sale_data():
 
                     # 4. Данных нет
                     if diff_rows.empty:
-                        logger.info(message)
-                        return False
+                        #logger.info(message)
+                        #return False
+                        raise AirflowSkipException(message)
 
                     else:
                         # 5. Данные есть, создание временной таблицы -- поправить после результата left join 
@@ -199,8 +135,8 @@ def wf_dsm_mart_dsm_sale_data():
 
                         # 5.2. Вставка дельты
                         ch_client.insert_dataframe(f"INSERT INTO {tmp_table_name} VALUES", df_for_insert, settings=dict(use_numpy=True))
-                        logger.info(f"Найдено {diff_rows.shape[0]} новых записей в {tmp_table_name}")
-                        return {'tmp_table_name': tmp_table_name, 'loading_month': loading_month, 'report_date_to': report_date_to}
+                        logger.info(f"Найдено {diff_rows.shape[0]} новых записей в {src_table_name}. Создана временная таблица: {tmp_table_name}")
+                        return {'tmp_table_name': tmp_table_name, 'loading_month': loading_month}
         except AirflowSkipException:
         # Пробрасываем исключение пропуска дальше
             raise
@@ -212,7 +148,7 @@ def wf_dsm_mart_dsm_sale_data():
                 ch_client.disconnect()
                 
 
-    @task(pool='sequential_processing', pool_slots=1)
+    @task #(pool='sequential_processing', pool_slots=1)
     def load_altay_data(datas, **kwargs):
         f"""Загрузка новых данных из временной таблицы {datas['tmp_table_name']}"""
 
@@ -220,7 +156,6 @@ def wf_dsm_mart_dsm_sale_data():
             raise AirflowSkipException("Пропускаем загрузку - нет данных от проверки")
 
         loading_month = datas['loading_month']
-        report_date_to = datas['report_date_to']
         tmp_table_name = datas['tmp_table_name']
 
         try:
@@ -234,7 +169,7 @@ def wf_dsm_mart_dsm_sale_data():
             diff_rows = df_tmp.merge(df_fact[pk_list], on=pk_list, how='left', indicator=True).query('_merge == "left_only"').drop('_merge', axis=1)
 
             if diff_rows.empty:
-                logger.info(f"Успешно загружены все записи. {len(df_tmp)} записей в {tgt_table_name} за пероид {loading_month} - {report_date_to}.")
+                logger.info(f"Успешно загружены все записи. {len(df_tmp)} записей в {tgt_table_name} за {loading_month}.")
                 return tmp_table_name 
                 #{'message': f"Удалена временная таблица {tmp_table_name} для прогрузки пероида {loading_month} - {report_date_to}."}
             else:
@@ -243,15 +178,15 @@ def wf_dsm_mart_dsm_sale_data():
                 raise NotAllDatasLoad
         except NotAllDatasLoad as n:
             ch_client.execute(f"drop table {tmp_table_name}")
-            logger.error(f"Не все данные прогружены из {tmp_table_name} в {tgt_table_name}. Прогружено {df_tmp.shape[0]-diff_rows.shape[0]} из {df_tmp.shape[0]} за пероид {loading_month} - {report_date_to}.")
+            logger.error(f"Не все данные прогружены из {tmp_table_name} в {tgt_table_name}. Прогружено {df_tmp.shape[0]-diff_rows.shape[0]} из {df_tmp.shape[0]} за {loading_month}.")
         except Exception as e:
             ch_client.execute(f"drop table {tmp_table_name}")
-            logger.error(f"Ошибка при загрузке {tgt_table_name}: {str(e)} за пероид {loading_month} - {report_date_to}")
+            logger.error(f"Ошибка при загрузке {tgt_table_name}: {str(e)} за {loading_month}")
         finally:
             ch_client.disconnect()
     
     # 7. Удаление временной таблицы
-    @task(pool='sequential_processing', pool_slots=1)
+    @task #(pool='sequential_processing', pool_slots=1)
     def clean_up_temp_altay_data(tmp_table_name, **kwargs):
         """Удаление временной таблицы """
         if not tmp_table_name:
@@ -261,16 +196,12 @@ def wf_dsm_mart_dsm_sale_data():
         logger.info(f"Удалена временная таблица {tmp_table_name}.")
         ch_client.disconnect()
 
-    # Определение кол-ва периодов для прогрузки
-    periods = get_loading_periods()
-
-    # Определяем зависимости между задачами
-    check_result = check_new_data_altay_data.expand(period=periods)
+    get_period = get_loading_period()
+    check_result = check_new_data_altay_data.expand(period=get_period)
     load_task = load_altay_data.expand(datas=check_result)
     clean_task = clean_up_temp_altay_data.expand(tmp_table_name=load_task)
 
-    # Последовательное выполнение: проверка -> загрузка -> очистка
-    check_result >> load_task >> clean_task
+    get_period >> check_result >> load_task >> clean_task
 
 # Инициализация DAG
 wf_dsm_mart_dsm_sale_data()

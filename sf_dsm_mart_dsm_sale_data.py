@@ -11,6 +11,7 @@ import pendulum
 import uuid
 from airflow.exceptions import AirflowSkipException
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
+import psycopg2
 
 
 # Деление временного интервала по месяцам
@@ -20,36 +21,38 @@ def check_and_split_date_range(start_date, end_date):
     class NotCorrectData(Exception):
         pass
 
-    class TooBigPeriodDats(Exception):
+    class TooBigPeriodDates(Exception):
         pass
 
     try:
-        start_dt = pendulum.parse(start_date)
-        end_dt = pendulum.parse(end_date)
+        if not isinstance(start_dt, pendulum.DateTime) and isinstance(end_dt, pendulum.DateTime):
+            start_dt = pendulum.parse(start_date)
+            end_dt = pendulum.parse(end_date)
 
         diff_month = end_dt.diff(start_dt).in_months()
 
-        if diff_month < 0:
+        if end_dt < start_dt:
             raise NotCorrectData
         elif diff_month > 12:
-            raise TooBigPeriodDats
+            raise TooBigPeriodDates
         else:
             all_dates = [start_dt.add(months=mnth) for mnth in range(diff_month)]
-        return all_dates
+        return diff_month, all_dates
     except NotCorrectData as n:
-        logger.error(f"Дата окончания периода прогрузки меньше даты начала : {str(n)}")
+        print(f"Дата окончания периода прогрузки меньше даты начала: {str(n)}")
+        raise
     except Exception as e:
-        logger.error(f"Ошибка при вводе периода прогрузки: {str(e)}")
+        print(f"Ошибка при вводе периода прогрузки: {str(e)}")
+        raise
         
 @dag(
-    dag_id='wf_dsm_mart_dsm_manage_periods_of_sale_data',
+    dag_id='sf_dsm_mart_dsm_sale_data',
     schedule_interval='0 9 6 * *', # в 9 утра каждого месяца 6 числа
     start_date=days_ago(1),
-    #default_args=default_args,
     catchup=False,
     params={
         'dates_from': Param(
-            '-', #(datetime.now() - timedelta(days=1)).replace(day=1).strftime("%Y-%m-%d"),
+            '-',
             type='string',
             description='Дата начала отчетного периода в формате YYYY-MM-01. Указывать тот месяц, за который требуется отчет. Если требуется прогрузка за 1 месяц, поле "dates_to" оставить пустым.'
         ),
@@ -61,9 +64,11 @@ def check_and_split_date_range(start_date, end_date):
     },
     tags=['oracle', 'clickhouse', 'data_migration']
 )
-def wf_dsm_mart_dsm_manage_periods_of_sale_data():
+def sf_dsm_mart_dsm_sale_data():
+    @task.short_circuit
     def create_date_parametrs(*args, **kwargs):
-        f"""Генерация периодов для загрузки на основе параметров"""
+        """Генерация периодов для загрузки на основе параметров"""
+
         # Получаем параметр периода дат из контекста
         try:
             dag_run = kwargs.get('dag_run')
@@ -71,21 +76,26 @@ def wf_dsm_mart_dsm_manage_periods_of_sale_data():
             report_date_to = dag_run.conf.get('dates_to')
             
             if report_date_from == '-' and report_date_to == '-':
+                # прогрузка данных за последний месяц + 1 и до текущего месяца
                 logger.info(f"Запускается автоматическая прогрузка.")
-                query = f"select max(procecced_dttm) from posgrsql"
+                new_start_dt_loading = check_meta_start_dt_loading()
+                today = pendulum.today()# перевести today к формату yyyy-mm-01
 
-                ch_client = get_clickhouse_client()
-                last_dt_loading = ch_client.execute(query)
-                last_dt_loading = pendulum.fromformat(last_dt_loading, 'YYYY-MM-DD').add(months=1)
-                today = pendulum.today()
-
-                logger.info(f"Введены даты прогрузки данных, где dates_from = {last_dt_loading.format('YYYY-MM-DD')}, dates_to: {today.format('YYYY-MM-DD')}.")
+                if new_start_dt_loading:
+                    if new_start_dt_loading < today: 
+                        logger.info(f"Введены даты прогрузки данных, где dates_from = {last_dt_loading.format('YYYY-MM-DD')}, dates_to: {today.format('YYYY-MM-DD')}.")
+                    else:
+                        logger.info(f"Введены даты прогрузки данных за текущий месяц или более. Данных еще нет.")
+                        return False
+                else:
+                # если прогрузок еще никогда не было, загружаем все за последние 2 месяца
+                    new_start_dt_loading = today.substract(months=2)
+                    logger.info(f"В метаданных таблицы airflow.public.meta_dsm еще не было прогрузок. Запуск прогрузки данных за последние два месяца: dates_from = {new_start_dt_loading.format('YYYY-MM-DD')}, dates_to: {today.format('YYYY-MM-DD')}.")
                 
-                periods = split_date_range(last_dt_loading, today)
+                periods = split_date_range(new_start_dt_loading, today)
                 logger.info(f"Будет загружено {len(periods)} месяцев:")
                 for i, period in enumerate(periods):
                     logger.info(f"Месяц {i+1}: {period}")
-                
             elif report_date_to == '-':
                 periods = [pendulum.fromformat(report_date_from, 'YYYY-MM-DD')]
                 logger.info(f"Будет загружен 1 месяц: {report_date_from}")
@@ -107,13 +117,14 @@ def wf_dsm_mart_dsm_manage_periods_of_sale_data():
             trigger = TriggerDagRunOperator(
                 task_id=f'trigger_{period}',
                 trigger_dag_id='wf_dsm_mart_dsm_sale_data',
-                conf={'loading_month': period},
+                conf={'loading_month': period.format('YYYY-MM-DD')},
                 wait_for_completion=True # ждать завершения DAG перед следующим
             )
 
     task1 = create_date_parametrs()
-    trigger_dags(task1)
+    if task1:
+        trigger_dags(task1)
 
     create_date_parametrs >> trigger_dags
 
-wf_dsm_mart_dsm_manage_periods_of_sale_data()
+sf_dsm_mart_dsm_sale_data()
