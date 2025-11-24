@@ -46,7 +46,7 @@ def check_and_split_date_range(start_date, end_date):
         raise
         
 @dag(
-    dag_id='sf_dsm_mart_dsm_sale_data',
+    dag_id='cf_dsm_mart_dsm_sale_data',
     schedule_interval='0 9 6 * *', # в 9 утра каждого месяца 6 числа
     start_date=days_ago(1),
     catchup=False,
@@ -64,7 +64,7 @@ def check_and_split_date_range(start_date, end_date):
     },
     tags=['oracle', 'clickhouse', 'data_migration']
 )
-def sf_dsm_mart_dsm_sale_data():
+def cf_dsm_mart_dsm_sale_data():
     @task.short_circuit
     def create_date_parametrs(*args, **kwargs):
         """Генерация периодов для загрузки на основе параметров"""
@@ -123,8 +123,8 @@ def sf_dsm_mart_dsm_sale_data():
 
     task1 = create_date_parametrs()
     if task1:
-        trigger_dags(task1)
+        trigger_task = trigger_dags(task1)
 
-    create_date_parametrs >> trigger_dags
+    task1 >> trigger_task
 
-sf_dsm_mart_dsm_sale_data()
+cf_dsm_mart_dsm_sale_data()
