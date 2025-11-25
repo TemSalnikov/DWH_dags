@@ -120,7 +120,7 @@ def cf_dsm_mart_dsm_sale_data():
         for period in periods:
             trigger = trigger_dag(
                 dag_id='wf_dsm_mart_dsm_sale_data',
-                run_id=f"triggered_by_{context['dag_run'].run_id}",
+                run_id=f"triggered_by_{kwargs['dag_run'].run_id}",
                 conf={'loading_month': period.format('YYYY-MM-DD')},
                 execution_date=None,
                 replace_microseconds=False
