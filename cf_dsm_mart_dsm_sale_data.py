@@ -28,7 +28,7 @@ def check_and_split_date_range(start_date, end_date):
         pass
 
     try:
-        if not isinstance(start_dt, pendulum.DateTime) and isinstance(end_dt, pendulum.DateTime):
+        if not isinstance(start_date, pendulum.DateTime) and isinstance(end_date, pendulum.DateTime):
             start_dt = pendulum.parse(start_date)
             end_dt = pendulum.parse(end_date)
 
