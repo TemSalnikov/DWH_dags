@@ -32,14 +32,14 @@ def check_and_split_date_range(start_date, end_date):
             start_dt = pendulum.parse(start_date)
             end_dt = pendulum.parse(end_date)
 
-        diff_month = end_dt.diff(start_dt).in_months()
+        diff_month = end_dt.diff(start_dt).in_months() + 1
 
         if end_dt < start_dt:
             raise NotCorrectData
         elif diff_month > 12:
             raise TooBigPeriodDates
         else:
-            all_dates = [start_dt.add(months=mnth) for mnth in range(diff_month)]
+            all_dates = [start_dt.add(months=mnth) for mnth in range(1, diff_month+1)]
         return diff_month, all_dates
     except NotCorrectData as n:
         print(f"Дата окончания периода прогрузки меньше даты начала: {str(n)}")
