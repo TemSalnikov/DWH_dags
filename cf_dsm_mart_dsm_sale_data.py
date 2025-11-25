@@ -40,7 +40,7 @@ def check_and_split_date_range(start_date, end_date):
             raise TooBigPeriodDates
         else:
             all_dates = [start_dt.add(months=mnth) for mnth in range(1, diff_month+1)]
-        return diff_month, all_dates
+        return all_dates
     except NotCorrectData as n:
         print(f"Дата окончания периода прогрузки меньше даты начала: {str(n)}")
         raise
