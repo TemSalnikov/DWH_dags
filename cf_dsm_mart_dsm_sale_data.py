@@ -39,7 +39,7 @@ def check_and_split_date_range(start_date, end_date):
         elif diff_month > 12:
             raise TooBigPeriodDates
         else:
-            all_dates = [start_dt.add(months=mnth) for mnth in range(1, diff_month+1)]
+            all_dates = [start_dt.add(months=mnth) for mnth in range(diff_month)]
         return all_dates
     except NotCorrectData as n:
         print(f"Дата окончания периода прогрузки меньше даты начала: {str(n)}")
@@ -118,7 +118,7 @@ def cf_dsm_mart_dsm_sale_data():
     def trigger_dags(periods, **kwargs):
         for period in periods:
             trigger = TriggerDagRunOperator(
-                task_id=f'trigger_{period}',
+                task_id=f'trigger_{period.format('YYYY-MM-DD')}',
                 trigger_dag_id='wf_dsm_mart_dsm_sale_data',
                 conf={'loading_month': period.format('YYYY-MM-DD')},
                 wait_for_completion=True # ждать завершения DAG перед следующим
