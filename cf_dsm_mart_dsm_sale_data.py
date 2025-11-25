@@ -13,6 +13,7 @@ from airflow.exceptions import AirflowSkipException
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 import psycopg2
 import libs.functions_dwh.functions_dsm
+from airflow.api.common.trigger_dag import trigger_dag
 
 # Настройка логирования
 logger = LoggingMixin().log
@@ -117,17 +118,24 @@ def cf_dsm_mart_dsm_sale_data():
     @task
     def trigger_dags(periods, **kwargs):
         for period in periods:
-            trigger = TriggerDagRunOperator(
-                task_id=f"trigger_{period.format('YYYY-MM-DD')}",
-                #dag_id = 'wf_dsm_mart_dsm_sale_data',
-                trigger_dag_id='wf_dsm_mart_dsm_sale_data',
+            trigger = trigger_dag(
+                dag_id='wf_dsm_mart_dsm_sale_data',
+                run_id=f"triggered_by_{context['dag_run'].run_id}",
                 conf={'loading_month': period.format('YYYY-MM-DD')},
-                wait_for_completion=True # ждать завершения DAG перед следующим
+                execution_date=None,
+                replace_microseconds=False
             )
+            # trigger = TriggerDagRunOperator(
+            #     task_id=f"trigger_{period.format('YYYY-MM-DD')}",
+            #     #dag_id = 'wf_dsm_mart_dsm_sale_data',
+            #     trigger_dag_id='wf_dsm_mart_dsm_sale_data',
+            #     conf={'loading_month': period.format('YYYY-MM-DD')},
+            #     wait_for_completion=True # ждать завершения DAG перед следующим
+            # )
             if not trigger:
                 raise RuntimeError("Не удалось запустить дочерний DAG")
             else:
-                logger.info(f"Запущен триггер на вызов потока: wf_dsm_mart_dsm_sale_data")
+                logger.info(f"Запущен триггер на вызов потока: wf_dsm_mart_dsm_sale_data за период {period.format('YYYY-MM-DD')}")
 
     task1 = create_date_parametrs()
     if task1:
