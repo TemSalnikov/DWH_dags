@@ -119,10 +119,15 @@ def cf_dsm_mart_dsm_sale_data():
         for period in periods:
             trigger = TriggerDagRunOperator(
                 task_id=f"trigger_{period.format('YYYY-MM-DD')}",
-                trigger_dag_id='wf_dsm_mart_dsm_sale_data',
+                dag_id = 'wf_dsm_mart_dsm_sale_data',
+                #trigger_dag_id='wf_dsm_mart_dsm_sale_data',
                 conf={'loading_month': period.format('YYYY-MM-DD')},
                 wait_for_completion=True # ждать завершения DAG перед следующим
             )
+            if not trigger:
+                raise RuntimeError("Не удалось запустить дочерний DAG")
+            else:
+                logger.info(f"Запущен триггер на вызов потока: wf_dsm_mart_dsm_sale_data")
 
     task1 = create_date_parametrs()
     if task1:
