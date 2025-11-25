@@ -118,7 +118,7 @@ def cf_dsm_mart_dsm_sale_data():
     def trigger_dags(periods, **kwargs):
         for period in periods:
             trigger = TriggerDagRunOperator(
-                task_id=f'trigger_{period.format('YYYY-MM-DD')}',
+                task_id=f"trigger_{period.format('YYYY-MM-DD')}",
                 trigger_dag_id='wf_dsm_mart_dsm_sale_data',
                 conf={'loading_month': period.format('YYYY-MM-DD')},
                 wait_for_completion=True # ждать завершения DAG перед следующим
