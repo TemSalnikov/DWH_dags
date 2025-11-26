@@ -199,9 +199,12 @@ def wf_dsm_mart_dsm_sale_data():
         ch_client.disconnect()
 
     get_period = get_loading_period()
-    check_result = check_new_data_altay_data.expand(period=get_period)
-    load_task = load_altay_data.expand(datas=check_result)
-    clean_task = clean_up_temp_altay_data.expand(tmp_table_name=load_task)
+    check_result = check_new_data_altay_data(get_period)
+    load_task = load_altay_data(check_result)
+    clean_task = clean_up_temp_altay_data(load_task)
+    #check_result = check_new_data_altay_data.expand(period=get_period)
+    #load_task = load_altay_data.expand(datas=check_result)
+    #clean_task = clean_up_temp_altay_data.expand(tmp_table_name=load_task)
 
     get_period >> check_result >> load_task >> clean_task
 
