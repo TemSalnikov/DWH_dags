@@ -35,10 +35,10 @@ default_args = {
     params = {
         "p_version_prev": Param({'mart_mdlp_general_report_on_disposal':'2025-01-01',
                                  'mart_mdlp_general_pricing_report':'2025-01-01',
-                                 'mart_mdlp_general_report_on_movement':'2025-01-01'}, type = "array", title = "Processed_dttm предыдущей выгрузки"),
+                                 'mart_mdlp_general_report_on_movement':'2025-01-01'}, type = "dict", title = "Processed_dttm предыдущей выгрузки"),
         "p_version_new": Param({'mart_mdlp_general_report_on_disposal':'2025-01-01',
                                  'mart_mdlp_general_pricing_report':'2025-01-01',
-                                 'mart_mdlp_general_report_on_movement':'2025-01-01'}, type = "array", title = "Processed_dttm новой выгрузки")
+                                 'mart_mdlp_general_report_on_movement':'2025-01-01'}, type = "dict", title = "Processed_dttm новой выгрузки")
     }
 )
 
