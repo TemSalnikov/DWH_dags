@@ -1,9 +1,9 @@
 import uuid
+import re
 from datetime import datetime
 from airflow.utils.log.logging_mixin import LoggingMixin
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.decorators import task
-from typing import Dict, List
 from clickhouse_driver import Client
 from clickhouse_driver.errors import Error as ClickhouseError
 
@@ -28,6 +28,14 @@ def get_clickhouse_client():
     except ClickhouseError as e:
         logger.error(f"Ошибка подключения к ClickHouse: {e}")
         raise
+
+def remove_postal_code(address):
+    # Паттерн для поиска 6 цифр (6-значный индекс),
+    # который может быть в начале (^) или в конце ($) строки
+    pattern = r"(?:^|\s*)(\d{6})(?:$|\s*)"
+    address = re.sub(pattern, "", address).strip(',')
+    return address.strip()
+
 @task
 def convert_hist_p2i(tmp_table: str, pk_list: list) -> str:
     client = None

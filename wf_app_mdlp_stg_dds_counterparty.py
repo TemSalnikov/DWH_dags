@@ -9,7 +9,10 @@ script_path = os.path.abspath(__file__)
 project_path = os.path.dirname(script_path)+'/libs'
 sys.path.append(project_path)
 import dds_group_tasks.task_group_creation_surogate as tg_sur
+import dds_group_tasks.task_group_creation_surogate_salepoint as tg_sur_salepoint
 from functions_dwh.functions_dds import load_delta, save_meta
+
+
 
 default_args = {
     'owner': 'artem_s',
@@ -86,12 +89,26 @@ def wf_app_mdlp_stg_dds_counterparty():
                 the_subject_of_the_russian_federation as the_subject_name,
                 settlement as settlement_name,
                 district as district_name,
-                address as address_name,
+                trim(replaceRegexpAll(
+                        replaceRegexpAll(
+                            replaceRegexpAll(address, '\\d{6}', ''),
+                            ',\\s*,', 
+                            ','
+                        ),
+                        '\\s+', ' ' )
+                    ) as address_name,
                 identifier_md_participant as md_system_code,
                 'MDLP' as src,
                 toDateTime('1990-01-01 00:01:01') as effective_dttm,
                 1 as algorithm_type,
-                concat(toString(tin_of_the_participant), '^^', address) as salepoint_business_key
+                concat(toString(tin_of_the_participant), '^^', trim(replaceRegexpAll(
+                                                                        replaceRegexpAll(
+                                                                            replaceRegexpAll(address, '\\d{6}', ''),
+                                                                            ',\\s*,', 
+                                                                            ','
+                                                                        ),
+                                                                        '\\s+', ' ' )
+                                                                    )) as salepoint_business_key
             FROM stg.v_iv_mart_mdlp_general_report_on_disposal
             WHERE processed_dttm BETWEEN '{p_version_prev}' AND '{p_version_new}'
             """
@@ -447,8 +464,9 @@ def wf_app_mdlp_stg_dds_counterparty():
                 logger.debug("Подключение к ClickHouse закрыто")
 
     @task
-    def join_surrogate_keys(inc_table: str, counterparty_hub_table: str, salepoint_hub_table: str) -> str:
+    def join_surrogate_keys(inc_table: str, counterparty_hub_table: str, salepoint_hub_table: str, threshold: float = 0.35) -> str:
         """Объединение суррогатных ключей из двух хабов"""
+        #threshold: float = 0.35  Чем меньше, тем больше сходство. Обычно 0.3–0.5.
         client = None
         tmp_table_name = f"tmp.tmp_joined_counterparty_{tg_sur.uuid.uuid4().hex}"
         
@@ -479,7 +497,7 @@ def wf_app_mdlp_stg_dds_counterparty():
                 AND hc.effective_from_dttm <= t.effective_dttm
                 AND hc.effective_to_dttm > t.effective_dttm
             LEFT JOIN {salepoint_hub_table} hs 
-                ON t.salepoint_business_key = hs.counterparty_salepoint_id 
+                ON ngramDistanceUTF8(t.salepoint_business_key, hs.counterparty_salepoint_id) <= {threshold}
                 AND t.src = hs.src 
                 AND hs.effective_from_dttm <= t.effective_dttm
                 AND hs.effective_to_dttm > t.effective_dttm
@@ -526,7 +544,7 @@ def wf_app_mdlp_stg_dds_counterparty():
     )
     
     # Генерация суррогатных ключей для точек продаж (по составному ключу)
-    generate_salepoint_sur_key_task = tg_sur.hub_load_processing_tasks(
+    generate_salepoint_sur_key_task = tg_sur_salepoint.hub_load_processing_tasks(
         hub_salepoint_table,
         union_table_task,
         'salepoint_business_key',

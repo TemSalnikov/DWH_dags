@@ -139,6 +139,7 @@ def hub_load_processing_tasks(hub_name: str, source_table: str, src_pk:str,  hub
             ORDER BY ({src_pk})
             AS
             SELECT DISTINCT 
+                h.{hub_pk},
                 t.{src_pk},
                 t.src,
                 t.effective_dttm
@@ -175,6 +176,123 @@ def hub_load_processing_tasks(hub_name: str, source_table: str, src_pk:str,  hub
             if client:
                 client.disconnect()
                 logger.debug("Подключение к ClickHouse закрыто")
+    @task
+    def get_hub_rows_dlt(tmp_table: str, hub_table: str) -> str:
+        """Сравнение данных с хаб-таблицей"""
+        client = None
+        in_hub_table = f"tmp.tmp_id_inhub_{uuid.uuid4().hex}"
+        dlt_rws_table = f"tmp.tmp_id_dlt_rws_{uuid.uuid4().hex}"
+        logger = LoggingMixin().log
+        try:
+            client = get_clickhouse_client()
+            logger.info(f"Начало сравнения данных из {tmp_table} с хабом {hub_table}")
+         
+            query_set = "SET allow_experimental_join_condition = 1"
+            client.execute(query_set)
+
+            # Данные отсутствующие в hub
+            query_not_in_hub = f"""
+            CREATE TABLE {dlt_rws_table} 
+            ENGINE = MergeTree()
+            PRIMARY KEY ({src_pk})
+            ORDER BY ({src_pk})
+            AS
+            SELECT  
+                h.{hub_pk},
+                t.{src_pk} as {hub_id},
+                t.src,
+                h.effective_from_dttm as effective_dttm,
+                deleted_flg = False
+            FROM {tmp_table} t
+            LEFT JOIN {hub_table} h 
+                ON splitByChar('^^',t.{src_pk})[0] = splitByChar('^^',h.{hub_id})[0] AND splitByChar('^^',h.{hub_id})[1] = 'DEFAULT_SALEPOINT'  AND t.src = h.src AND h.effective_from_dttm <= t.effective_dttm
+                AND h.effective_to_dttm >= t.effective_dttm
+            UNION DISTINCT
+            SELECT  
+                h.{hub_pk},
+                h.{hub_id},
+                t.src,
+                t.effective_dttm,
+                deleted_flg = True
+            FROM {tmp_table} t
+            LEFT JOIN {hub_table} h 
+                ON splitByChar('^^',t.{src_pk})[0] = splitByChar('^^',h.{hub_id})[0] AND splitByChar('^^',h.{hub_id})[1] = 'DEFAULT_SALEPOINT'  AND t.src = h.src AND h.effective_from_dttm <= t.effective_dttm
+                AND h.effective_to_dttm >= t.effective_dttm
+            """
+            logger.info(f"Создан запрос: {query_not_in_hub}")
+
+            
+            client.execute(query_not_in_hub)
+            logger.info(f"Создана таблица новых записей: {dlt_rws_table}")
+            
+
+            count_not_in_hub = client.execute(f"SELECT count() FROM {dlt_rws_table}")[0][0]
+            logger.info(f"Новых id: {count_not_in_hub}")
+            
+
+            return dlt_rws_table
+            
+        except ClickhouseError as e:
+            logger.error(f"Ошибка при сравнении с хабом: {e}")
+            raise
+        finally:
+            if client:
+                client.disconnect()
+                logger.debug("Подключение к ClickHouse закрыто")
+    
+    @task
+    def get_rws_without_uid(tmp_table_without_uid: str, tmp_table_with_uid: str, threshold: float = 0.35) -> str:
+        """Сравнение данных с хаб-таблицей"""
+        client = None
+        in_hub_table = f"tmp.tmp_id_inhub_{uuid.uuid4().hex}"
+        rws_without_uid_table = f"tmp.tmp_rws_without_uid_{uuid.uuid4().hex}"
+        logger = LoggingMixin().log
+        try:
+            client = get_clickhouse_client()
+            logger.info(f"Начало сравнения данных из {tmp_table_without_uid} с {tmp_table_with_uid}")
+         
+            query_set = "SET allow_experimental_join_condition = 1"
+            client.execute(query_set)
+
+            # Данные отсутствующие в hub
+            query_not_in_hub = f"""
+            CREATE TABLE {rws_without_uid_table} 
+            ENGINE = MergeTree()
+            PRIMARY KEY ({src_pk})
+            ORDER BY ({src_pk})
+            AS
+            SELECT DISTINCT 
+                
+                t.{src_pk},
+                t.src,
+                t.effective_dttm,
+                deleted_flg = False
+            FROM {tmp_table_without_uid} t
+            LEFT JOIN {tmp_table_with_uid} h 
+                ON ngramDistanceUTF8(t.{src_pk}), h.{hub_id}) <= {threshold}
+            WHERE h.{hub_pk} = ''
+            """
+            logger.info(f"Создан запрос: {query_not_in_hub}")
+
+            
+            client.execute(query_not_in_hub)
+            logger.info(f"Создана таблица новых записей: {rws_without_uid_table}")
+            
+
+            count_not_in_hub = client.execute(f"SELECT count() FROM {rws_without_uid_table}")[0][0]
+            logger.info(f"Новых id: {count_not_in_hub}")
+            
+
+            return rws_without_uid_table
+            
+        except ClickhouseError as e:
+            logger.error(f"Ошибка при сравнении с хабом: {e}")
+            raise
+        finally:
+            if client:
+                client.disconnect()
+                logger.debug("Подключение к ClickHouse закрыто")
+
 
     @task
     def generate_uuids(tmp_table: str) -> str:
@@ -196,7 +314,8 @@ def hub_load_processing_tasks(hub_name: str, source_table: str, src_pk:str,  hub
                 toString(generateUUIDv4()) as {hub_pk},
                 {src_pk} as {hub_id},
                 src,
-                effective_dttm
+                effective_dttm,
+                deleted_flg
             FROM {tmp_table}
             WHERE {src_pk} != ''
             UNION ALL
@@ -219,6 +338,55 @@ def hub_load_processing_tasks(hub_name: str, source_table: str, src_pk:str,  hub
             
         except ClickhouseError as e:
             logger.error(f"Ошибка при генерации UUID: {e}")
+            raise
+        finally:
+            if client:
+                client.disconnect()
+                logger.debug("Подключение к ClickHouse закрыто")
+
+    @task
+    def get_union_tlb(tmp_table_dlt: str, tbl_new_uid: str) -> str:
+        """Сравнение данных с хаб-таблицей"""
+        client = None
+        union_table = f"tmp.tmp_union_{uuid.uuid4().hex}"
+        logger = LoggingMixin().log
+        try:
+            client = get_clickhouse_client()
+            logger.info(f"Объединение таблиц {tmp_table_dlt} с {tbl_new_uid}")
+         
+            query_set = "SET allow_experimental_join_condition = 1"
+            client.execute(query_set)
+
+            # Данные отсутствующие в hub
+            query_not_in_hub = f"""
+            CREATE TABLE {union_table} 
+            ENGINE = MergeTree()
+            PRIMARY KEY ({src_pk})
+            ORDER BY ({src_pk})
+            AS
+            SELECT  
+                *
+            FROM {tmp_table_dlt} t
+            UNION DISTINCT
+            SELECT  
+                *
+            FROM {tbl_new_uid} t
+            """
+            logger.info(f"Создан запрос: {query_not_in_hub}")
+
+            
+            client.execute(query_not_in_hub)
+            logger.info(f"Создана таблица новых записей: {union_table}")
+            
+
+            count_not_in_hub = client.execute(f"SELECT count() FROM {union_table}")[0][0]
+            logger.info(f"Новых id: {count_not_in_hub}")
+            
+
+            return union_table
+            
+        except ClickhouseError as e:
+            logger.error(f"Ошибка при сравнении с хабом: {e}")
             raise
         finally:
             if client:
@@ -300,8 +468,11 @@ def hub_load_processing_tasks(hub_name: str, source_table: str, src_pk:str,  hub
 
     # last_load_table = get_last_load_data(source_table = source_table) ### наверное эту временную таблицу нужно вне task group получать и передавать во внутрь
     cmp_table = compare_with_hub(tmp_table = source_table, hub_table = hub_name)
-    uuid_table = generate_uuids(tmp_table=cmp_table)
-    insert_to_hub = insert_to_hub(pre_hub_table = uuid_table, hub_table = hub_name)
+    hub_rows_dlt = get_hub_rows_dlt(cmp_table, hub_name)
+    rws_without_uid = get_rws_without_uid(cmp_table, hub_rows_dlt)
+    uuid_table = generate_uuids(tmp_table=rws_without_uid)
+    union_tbl = get_union_tlb(hub_rows_dlt, uuid_table)
+    insert_to_hub = insert_to_hub(pre_hub_table = union_tbl, hub_table = hub_name)
     cleanup_tables = cleanup_tables([cmp_table, uuid_table])
 
     cmp_table >> uuid_table >> insert_to_hub >> cleanup_tables
