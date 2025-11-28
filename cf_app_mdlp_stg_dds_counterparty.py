@@ -66,7 +66,7 @@ def cf_app_mdlp_stg_dds_counterparty():
                 
                 if max_date:
                     logger.info(f'Максимальная дата для {table_name}: {max_date}')
-                    max_dates.append({table_name:datetime.strftime(max_date, '%Y-%m-%d %H:%M:%S')})
+                    max_dates.append({table_name:max_date})
                 else:
                     logger.warning(f'Нет данных в таблице {table_name}')
             
@@ -121,7 +121,7 @@ def cf_app_mdlp_stg_dds_counterparty():
                 logger.warning("Не найдено записей в таблице versions, используем дефолтную дату")
                 # Если нет предыдущих загрузок, используем старую дату
                 default_date = datetime(1990, 1, 1, 0, 1, 1)
-                return datetime.strftime(default_date, '%Y-%m-%d')
+                return datetime.strftime(default_date, '%Y-%m-%d ')
             
             result = [x[0] for x in res_list]
             last_load_date = result[0]
