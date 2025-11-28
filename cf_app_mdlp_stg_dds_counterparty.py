@@ -52,7 +52,7 @@ def cf_app_mdlp_stg_dds_counterparty():
         
         try:
             ch_client = get_clickhouse_client()
-            max_dates = []
+            max_dates = {}
             
             for table_name in table_names:
                 query = f"""
@@ -66,7 +66,7 @@ def cf_app_mdlp_stg_dds_counterparty():
                 
                 if max_date:
                     logger.info(f'Максимальная дата для {table_name}: {max_date}')
-                    max_dates.append({table_name:max_date})
+                    max_dates[table_name] = max_date
                 else:
                     logger.warning(f'Нет данных в таблице {table_name}')
             
@@ -121,7 +121,9 @@ def cf_app_mdlp_stg_dds_counterparty():
                 logger.warning("Не найдено записей в таблице versions, используем дефолтную дату")
                 # Если нет предыдущих загрузок, используем старую дату
                 default_date = datetime(1990, 1, 1, 0, 1, 1)
-                return datetime.strftime(default_date, '%Y-%m-%d ')
+                return {'mart_mdlp_general_report_on_disposal':'1900.01.01 00:00:01',
+                        'mart_mdlp_general_pricing_report':'1900.01.01 00:00:01', 
+                        'mart_mdlp_general_report_on_movement':'1900.01.01 00:00:01'}
             
             result = [x[0] for x in res_list]
             last_load_date = result[0]
@@ -148,9 +150,7 @@ def cf_app_mdlp_stg_dds_counterparty():
         logger.info(f'p_version_prev: {p_version_prev}, p_version_new: {p_version_new}')
         
         if (p_version_prev is not None and 
-            p_version_new is not None and 
-            datetime.strptime(p_version_prev, '%Y-%m-%d') < 
-            datetime.strptime(p_version_new, '%Y-%m-%d')):
+            p_version_new is not None):
             
             parameters = {
                 "p_version_prev": p_version_prev, 
