@@ -176,7 +176,7 @@ def hub_load_processing_tasks(hub_name: str, source_table: str, src_pk:str,  hub
             if client:
                 client.disconnect()
                 logger.debug("Подключение к ClickHouse закрыто")
-
+    @task
     def get_hub_rows_dlt(tmp_table: str, hub_table: str) -> str:
         """Сравнение данных с хаб-таблицей"""
         client = None
@@ -239,7 +239,8 @@ def hub_load_processing_tasks(hub_name: str, source_table: str, src_pk:str,  hub
             if client:
                 client.disconnect()
                 logger.debug("Подключение к ClickHouse закрыто")
-
+    
+    @task
     def get_rws_without_uid(tmp_table_without_uid: str, tmp_table_with_uid: str, threshold: float = 0.35) -> str:
         """Сравнение данных с хаб-таблицей"""
         client = None
@@ -343,7 +344,7 @@ def hub_load_processing_tasks(hub_name: str, source_table: str, src_pk:str,  hub
                 client.disconnect()
                 logger.debug("Подключение к ClickHouse закрыто")
 
-    
+    @task
     def get_union_tlb(tmp_table_dlt: str, tbl_new_uid: str) -> str:
         """Сравнение данных с хаб-таблицей"""
         client = None
