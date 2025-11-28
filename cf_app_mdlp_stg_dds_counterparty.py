@@ -121,7 +121,7 @@ def cf_app_mdlp_stg_dds_counterparty():
                 logger.warning("Не найдено записей в таблице versions, используем дефолтную дату")
                 # Если нет предыдущих загрузок, используем старую дату
                 default_date = datetime(1990, 1, 1, 0, 1, 1)
-                return datetime.strftime(default_date, '%Y-%m-%d %H:%M:%S')
+                return datetime.strftime(default_date, '%Y-%m-%d')
             
             result = [x[0] for x in res_list]
             last_load_date = result[0]
@@ -149,8 +149,8 @@ def cf_app_mdlp_stg_dds_counterparty():
         
         if (p_version_prev is not None and 
             p_version_new is not None and 
-            datetime.strptime(p_version_prev, '%Y-%m-%d %H:%M:%S') < 
-            datetime.strptime(p_version_new, '%Y-%m-%d %H:%M:%S')):
+            datetime.strptime(p_version_prev, '%Y-%m-%d') < 
+            datetime.strptime(p_version_new, '%Y-%m-%d')):
             
             parameters = {
                 "p_version_prev": p_version_prev, 
