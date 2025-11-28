@@ -66,7 +66,7 @@ def cf_app_mdlp_stg_dds_counterparty():
                 
                 if max_date:
                     logger.info(f'Максимальная дата для {table_name}: {max_date}')
-                    max_dates.append(max_date)
+                    max_dates.append({table_name:datetime.strftime(max_date, '%Y-%m-%d %H:%M:%S')})
                 else:
                     logger.warning(f'Нет данных в таблице {table_name}')
             
@@ -76,11 +76,11 @@ def cf_app_mdlp_stg_dds_counterparty():
                 logger.error("Нет данных ни в одной из таблиц источников")
                 return None
             
-            # Берем минимальную дату из максимальных, чтобы гарантировать наличие данных во всех таблицах
-            min_max_date = min(max_dates)
-            logger.info(f'Минимальная дата из максимальных: {min_max_date}')
+            # # Берем минимальную дату из максимальных, чтобы гарантировать наличие данных во всех таблицах
+            # min_max_date = min(max_dates)
+            # logger.info(f'Минимальная дата из максимальных: {min_max_date}')
             
-            return datetime.strftime(min_max_date, '%Y-%m-%d %H:%M:%S')
+            return max_dates
             
         except Exception as e:
             logger.error(f"Ошибка при работе с ClickHouse: {e}")
@@ -127,7 +127,7 @@ def cf_app_mdlp_stg_dds_counterparty():
             last_load_date = result[0]
             logger.info(f'Полученный processed_dttm: {last_load_date}')  
             
-            return datetime.strftime(last_load_date, '%Y-%m-%d %H:%M:%S')
+            return last_load_date
             
         except Exception as e:
             logger.error(f"Ошибка при работе с PostgreSQL: {e}")
