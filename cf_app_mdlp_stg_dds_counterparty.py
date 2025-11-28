@@ -56,7 +56,7 @@ def cf_app_mdlp_stg_dds_counterparty():
             
             for table_name in table_names:
                 query = f"""
-                SELECT max(processed_dttm) as max_processed_dttm 
+                SELECT max(create_dttm) as max_processed_dttm 
                 FROM stg.{table_name}
                 """
                 logger.info(f'Сформирован запрос для таблицы {table_name}: {query}')
