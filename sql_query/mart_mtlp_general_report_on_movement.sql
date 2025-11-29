@@ -79,3 +79,113 @@ MODIFY column deleted_flag bool;
 
 select uuid_report, count(*) from cluster('cluster_2S_2R', 'stg', 'mart_mdlp_general_report_on_movement')
 group by uuid_report
+
+
+CREATE VIEW stg.v_sn_mart_mdlp_general_report_on_movement AS
+SELECT t1.* EXCEPT (create_dttm_max), create_dttm_max AS create_dttm
+FROM (
+    SELECT
+        the_date_of_the_operation,
+        tin_to_the_issuer,
+		mnn,
+		gtin,
+
+        argMax(the_name_of_the_issuer, toDateTime(create_dttm)) AS the_name_of_the_issuer,
+        argMax(trade_name, toDateTime(create_dttm)) AS trade_name,
+        argMax(series, toDateTime(create_dttm)) AS series,
+        argMax(operation_number, toDateTime(create_dttm)) AS operation_number,
+        argMax(tin_of_the_sender, toDateTime(create_dttm)) AS tin_of_the_sender,
+        argMax(name_of_the_sender, toDateTime(create_dttm)) AS name_of_the_sender,
+        argMax(identifier_md_of_the_sender, toDateTime(create_dttm)) AS identifier_md_of_the_sender,
+        argMax(tin_of_the_recipient, toDateTime(create_dttm)) AS tin_of_the_recipient,
+        argMax(name_of_the_recipient, toDateTime(create_dttm)) AS name_of_the_recipient,
+        argMax(identifier_md_of_the_recipient, toDateTime(create_dttm)) AS identifier_md_of_the_recipient,
+        argMax(quantity_units, toDateTime(create_dttm)) AS quantity_units,
+        argMax(source_of_financing, toDateTime(create_dttm)) AS source_of_financing,
+        argMax(data_update_date, toDateTime(create_dttm)) AS data_update_date,
+        argMax(type_report, toDateTime(create_dttm)) AS type_report,
+        argMax(date_to, toDateTime(create_dttm)) AS date_to,
+        argMax(uuid_report, toDateTime(create_dttm)) AS uuid_report,
+
+        -- технические поля
+        argMax(deleted_flag, toDateTime(create_dttm)) AS deleted_flag,
+        max(toDateTime(create_dttm)) AS create_dttm_max
+
+    FROM stg.mart_mdlp_general_report_on_movement
+    WHERE toDateTime(create_dttm) BETWEEN {p_from_dttm:DateTime} AND {p_to_dttm:DateTime}
+    GROUP BY gtin, tin_to_the_issuer, mnn, the_date_of_the_operation
+    HAVING deleted_flag = false
+) t1;
+
+CREATE VIEW IF NOT EXISTS stg.v_sv_mart_mdlp_general_report_on_movement ON CLUSTER cluster_2S_2R AS
+SELECT t1.* EXCEPT (create_dttm_max), create_dttm_max AS create_dttm
+FROM (
+    SELECT
+		the_date_of_the_operation,
+        tin_to_the_issuer,
+		mnn,
+		gtin,
+
+        argMax(the_name_of_the_issuer, toDateTime(create_dttm)) AS the_name_of_the_issuer,
+        argMax(trade_name, toDateTime(create_dttm)) AS trade_name,
+        argMax(series, toDateTime(create_dttm)) AS series,
+        argMax(operation_number, toDateTime(create_dttm)) AS operation_number,
+        argMax(tin_of_the_sender, toDateTime(create_dttm)) AS tin_of_the_sender,
+        argMax(name_of_the_sender, toDateTime(create_dttm)) AS name_of_the_sender,
+        argMax(identifier_md_of_the_sender, toDateTime(create_dttm)) AS identifier_md_of_the_sender,
+        argMax(tin_of_the_recipient, toDateTime(create_dttm)) AS tin_of_the_recipient,
+        argMax(name_of_the_recipient, toDateTime(create_dttm)) AS name_of_the_recipient,
+        argMax(identifier_md_of_the_recipient, toDateTime(create_dttm)) AS identifier_md_of_the_recipient,
+        argMax(quantity_units, toDateTime(create_dttm)) AS quantity_units,
+        argMax(source_of_financing, toDateTime(create_dttm)) AS source_of_financing,
+        argMax(data_update_date, toDateTime(create_dttm)) AS data_update_date,
+        argMax(type_report, toDateTime(create_dttm)) AS type_report,
+        argMax(date_to, toDateTime(create_dttm)) AS date_to,
+        argMax(uuid_report, toDateTime(create_dttm)) AS uuid_report,
+
+        -- технические поля
+        argMax(deleted_flag, toDateTime(create_dttm)) AS deleted_flag,
+        max(toDateTime(create_dttm)) AS create_dttm_max
+
+    FROM stg.mart_mdlp_general_report_on_movement
+    WHERE toDateTime(create_dttm) <= {p_processed_dttm_user:DateTime}
+    GROUP BY gtin, tin_to_the_issuer, mnn, the_date_of_the_operation
+    HAVING deleted_flag = false
+) t1;
+
+
+CREATE VIEW IF NOT EXISTS stg.v_iv_mart_mdlp_general_report_on_movement ON CLUSTER cluster_2S_2R AS
+SELECT t1.* EXCEPT (create_dttm_max), create_dttm_max AS create_dttm
+FROM (
+    SELECT
+		the_date_of_the_operation,
+        tin_to_the_issuer,
+		mnn,
+		gtin,
+
+        argMax(the_name_of_the_issuer, toDateTime(create_dttm)) AS the_name_of_the_issuer,
+        argMax(trade_name, toDateTime(create_dttm)) AS trade_name,
+        argMax(series, toDateTime(create_dttm)) AS series,
+        argMax(operation_number, toDateTime(create_dttm)) AS operation_number,
+        argMax(tin_of_the_sender, toDateTime(create_dttm)) AS tin_of_the_sender,
+        argMax(name_of_the_sender, toDateTime(create_dttm)) AS name_of_the_sender,
+        argMax(identifier_md_of_the_sender, toDateTime(create_dttm)) AS identifier_md_of_the_sender,
+        argMax(tin_of_the_recipient, toDateTime(create_dttm)) AS tin_of_the_recipient,
+        argMax(name_of_the_recipient, toDateTime(create_dttm)) AS name_of_the_recipient,
+        argMax(identifier_md_of_the_recipient, toDateTime(create_dttm)) AS identifier_md_of_the_recipient,
+        argMax(quantity_units, toDateTime(create_dttm)) AS quantity_units,
+        argMax(source_of_financing, toDateTime(create_dttm)) AS source_of_financing,
+        argMax(data_update_date, toDateTime(create_dttm)) AS data_update_date,
+        argMax(type_report, toDateTime(create_dttm)) AS type_report,
+        argMax(date_to, toDateTime(create_dttm)) AS date_to,
+        argMax(uuid_report, toDateTime(create_dttm)) AS uuid_report,
+
+        -- технические поля
+        argMax(deleted_flag, toDateTime(create_dttm)) AS deleted_flag,
+        max(toDateTime(create_dttm)) AS create_dttm_max
+
+    FROM stg.mart_mdlp_general_report_on_movement
+    WHERE toDateTime(create_dttm) BETWEEN {p_from_dttm:DateTime} AND {p_to_dttm:DateTime}
+    GROUP BY gtin, tin_to_the_issuer, mnn, the_date_of_the_operation
+    HAVING deleted_flag = false
+) t1;
