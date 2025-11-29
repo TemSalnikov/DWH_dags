@@ -121,23 +121,23 @@ def cf_dsm_mart_dsm_sale_data():
             logger.info(period)
             logger.info(period.format('YYYY-MM-DD'))
             short_id = uuid.uuid4().hex[:8], 
-            logger.info(short_id[0])
-            logger.info(f"RUN_ID: triggered_by_{short_id[0]}_{kwargs['dag_run'].run_id}")
-            trigger = trigger_dag(
-                dag_id='wf_dsm_mart_dsm_sale_data',
-                run_id=f"triggered_by_{short_id[0]}_{kwargs['dag_run'].run_id}",
-                conf={'loading_month': period.format('YYYY-MM-DD')},
-                execution_date=None,
-                replace_microseconds=False#,
-                #wait_for_completion=True # ждать завершения DAG перед следующим
-            )
-            # trigger = TriggerDagRunOperator(
-            #     task_id=f"trigger_{period.format('YYYY-MM-DD')}",
-            #     #dag_id = 'wf_dsm_mart_dsm_sale_data',
-            #     trigger_dag_id='wf_dsm_mart_dsm_sale_data',
+            #logger.info(short_id[0])
+            #logger.info(f"RUN_ID: triggered_by_{short_id[0]}_{kwargs['dag_run'].run_id}")
+            # trigger = trigger_dag(
+            #     dag_id='wf_dsm_mart_dsm_sale_data',
+            #     run_id=f"triggered_by_{short_id[0]}_{kwargs['dag_run'].run_id}",
             #     conf={'loading_month': period.format('YYYY-MM-DD')},
-            #     wait_for_completion=True # ждать завершения DAG перед следующим
+            #     execution_date=None,
+            #     replace_microseconds=False#,
+                #wait_for_completion=True # ждать завершения DAG перед следующим
             # )
+            trigger = TriggerDagRunOperator(
+                task_id=f"trigger_{period.format('YYYY-MM-DD')}_{short_id[0]}",
+                dag_id = 'wf_dsm_mart_dsm_sale_data',
+                trigger_dag_id='wf_dsm_mart_dsm_sale_data',
+                conf={'loading_month': period.format('YYYY-MM-DD')},
+                wait_for_completion=True # ждать завершения DAG перед следующим
+            )
             if not trigger:
                 raise RuntimeError("Не удалось запустить дочерний DAG")
             else:
