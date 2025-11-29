@@ -178,7 +178,7 @@ def wf_app_mdlp_stg_dds_counterparty():
             FROM stg.v_iv_mart_mdlp_general_report_on_disposal(p_from_dttm = '{p_version_prev}', p_to_dttm = '{p_version_new}')
             """
             
-            logger.info(f"Создан запрос для алгоритма 2: {tmp_table_name}")
+            logger.info(f"Создан запрос для алгоритма 2: {query}")
             client.execute(query)
             logger.info(f"Создана временная таблица {tmp_table_name} для алгоритма 2")
             
@@ -226,7 +226,7 @@ def wf_app_mdlp_stg_dds_counterparty():
             FROM stg.v_iv_mart_mdlp_general_pricing_report(p_from_dttm = '{p_version_prev}', p_to_dttm = '{p_version_new}')
             """
             
-            logger.info(f"Создан запрос для алгоритма 3: {tmp_table_name}")
+            logger.info(f"Создан запрос для алгоритма 3: {query}")
             client.execute(query)
             logger.info(f"Создана временная таблица {tmp_table_name} для алгоритма 3")
             
@@ -274,7 +274,7 @@ def wf_app_mdlp_stg_dds_counterparty():
             FROM stg.v_iv_mart_mdlp_general_pricing_report(p_from_dttm = '{p_version_prev}', p_to_dttm = '{p_version_new}')
             """
             
-            logger.info(f"Создан запрос для алгоритма 4: {tmp_table_name}")
+            logger.info(f"Создан запрос для алгоритма 4: {query}")
             client.execute(query)
             logger.info(f"Создана временная таблица {tmp_table_name} для алгоритма 4")
             
@@ -322,7 +322,7 @@ def wf_app_mdlp_stg_dds_counterparty():
             FROM stg.v_iv_mart_mdlp_general_report_on_movement(p_from_dttm = '{p_version_prev}', p_to_dttm = '{p_version_new}')
             """
             
-            logger.info(f"Создан запрос для алгоритма 5: {tmp_table_name}")
+            logger.info(f"Создан запрос для алгоритма 5: {query}")
             client.execute(query)
             logger.info(f"Создана временная таблица {tmp_table_name} для алгоритма 5")
             
@@ -370,7 +370,7 @@ def wf_app_mdlp_stg_dds_counterparty():
             FROM stg.v_iv_mart_mdlp_general_report_on_movement(p_from_dttm = '{p_version_prev}', p_to_dttm = '{p_version_new}')
             """
             
-            logger.info(f"Создан запрос для алгоритма 6: {tmp_table_name}")
+            logger.info(f"Создан запрос для алгоритма 6: {query}")
             client.execute(query)
             logger.info(f"Создана временная таблица {tmp_table_name} для алгоритма 6")
             
@@ -418,7 +418,7 @@ def wf_app_mdlp_stg_dds_counterparty():
             FROM stg.v_iv_mart_mdlp_general_report_on_movement(p_from_dttm = '{p_version_prev}', p_to_dttm = '{p_version_new}')
             """
             
-            logger.info(f"Создан запрос для алгоритма 7: {tmp_table_name}")
+            logger.info(f"Создан запрос для алгоритма 7: {query}")
             client.execute(query)
             logger.info(f"Создана временная таблица {tmp_table_name} для алгоритма 7")
             
