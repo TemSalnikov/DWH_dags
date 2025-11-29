@@ -49,7 +49,37 @@ def check_and_split_date_range(start_date, end_date):
     except Exception as e:
         print(f"Ошибка при вводе периода прогрузки: {str(e)}")
         raise
+
+def wait_for_dag_completion(dag_id, run_id, check_interval=30):
+        """Функция ожидания завершения DAG (упрощенная версия)"""
+        from airflow.api.common.experimental.get_dag_runs import get_dag_runs
+        from airflow.utils.state import State
+        import time
         
+        while True:
+            # Получаем статус DAG run
+            dag_runs = get_dag_runs(dag_id)
+            logger.info(f"dag_runs: {dag_runs}")
+            current_run = None
+            
+            for dr in dag_runs:
+                if dr.run_id == run_id:
+                    current_run = dr
+                    break
+            
+            if not current_run:
+                logger.warning(f"DAG run {run_id} не найден")
+                break
+                
+            if current_run.state in [State.SUCCESS, State.FAILED]:
+                logger.info(f"DAG run {run_id} завершен со статусом: {current_run.state}")
+                if current_run.state == State.FAILED:
+                    raise Exception(f"DAG {dag_id} завершился с ошибкой")
+                break
+                
+            logger.info(f"Ожидание завершения DAG {run_id}... Текущий статус: {current_run.state}")
+            time.sleep(check_interval)
+
 @dag(
     dag_id='cf_dsm_mart_dsm_sale_data',
     schedule_interval='0 9 6 * *', # в 9 утра каждого месяца 6 числа
@@ -141,36 +171,6 @@ def cf_dsm_mart_dsm_sale_data():
             logger.info(f"Завершен DAG для периода {period.format('YYYY-MM-DD')}")
     
         return True
-
-    def wait_for_dag_completion(dag_id, run_id, check_interval=30):
-        """Функция ожидания завершения DAG (упрощенная версия)"""
-        from airflow.api.common.experimental.get_dag_runs import get_dag_runs
-        from airflow.utils.state import State
-        import time
-        
-        while True:
-            # Получаем статус DAG run
-            dag_runs = get_dag_runs(dag_id)
-            logger.info(f"dag_runs: {dag_runs}")
-            current_run = None
-            
-            for dr in dag_runs:
-                if dr.run_id == run_id:
-                    current_run = dr
-                    break
-            
-            if not current_run:
-                logger.warning(f"DAG run {run_id} не найден")
-                break
-                
-            if current_run.state in [State.SUCCESS, State.FAILED]:
-                logger.info(f"DAG run {run_id} завершен со статусом: {current_run.state}")
-                if current_run.state == State.FAILED:
-                    raise Exception(f"DAG {dag_id} завершился с ошибкой")
-                break
-                
-            logger.info(f"Ожидание завершения DAG {run_id}... Текущий статус: {current_run.state}")
-            time.sleep(check_interval)
 
     task1 = create_date_parametrs()
     if task1:
