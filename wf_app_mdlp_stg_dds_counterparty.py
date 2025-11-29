@@ -86,8 +86,8 @@ def wf_app_mdlp_stg_dds_counterparty():
         logger = LoggingMixin().log
         tmp_table_name = f"tmp.tmp_algo1_{tg_sur.uuid.uuid4().hex}"
         logger.info(f"получены параметры: {p_version}: {type(p_version)}")
-        p_version_prev = p_version['p_version_prev'][name_src_tbl]
-        p_version_new = p_version['p_version_new'][name_src_tbl]
+        p_version_prev = p_version['p_version_prev'][name_src_tbl][:19]
+        p_version_new = p_version['p_version_new'][name_src_tbl][:19]
         logger.info(f"получены параметры: {p_version_prev}: {p_version_new}")
         try:
             
@@ -154,8 +154,8 @@ def wf_app_mdlp_stg_dds_counterparty():
             logger = LoggingMixin().log
             client = tg_sur.get_clickhouse_client()
             logger.info("Подключение к ClickHouse успешно выполнено")
-            p_version_prev = p_version['p_version_prev'][name_src_tbl]
-            p_version_new = p_version['p_version_new'][name_src_tbl]
+            p_version_prev = p_version['p_version_prev'][name_src_tbl][:19]
+            p_version_new = p_version['p_version_new'][name_src_tbl][:19]
             query = f"""
             CREATE TABLE {tmp_table_name} 
             ENGINE = MergeTree()
@@ -202,8 +202,8 @@ def wf_app_mdlp_stg_dds_counterparty():
             logger = LoggingMixin().log
             client = tg_sur.get_clickhouse_client()
             logger.info("Подключение к ClickHouse успешно выполнено")
-            p_version_prev = p_version['p_version_prev'][name_src_tbl]
-            p_version_new = p_version['p_version_new'][name_src_tbl]
+            p_version_prev = p_version['p_version_prev'][name_src_tbl][:19]
+            p_version_new = p_version['p_version_new'][name_src_tbl][:19]
             query = f"""
             CREATE TABLE {tmp_table_name} 
             ENGINE = MergeTree()
@@ -250,8 +250,8 @@ def wf_app_mdlp_stg_dds_counterparty():
             logger = LoggingMixin().log
             client = tg_sur.get_clickhouse_client()
             logger.info("Подключение к ClickHouse успешно выполнено")
-            p_version_prev = p_version['p_version_prev'][name_src_tbl]
-            p_version_new = p_version['p_version_new'][name_src_tbl]
+            p_version_prev = p_version['p_version_prev'][name_src_tbl][:19]
+            p_version_new = p_version['p_version_new'][name_src_tbl][:19]
             query = f"""
             CREATE TABLE {tmp_table_name} 
             ENGINE = MergeTree()
@@ -298,8 +298,8 @@ def wf_app_mdlp_stg_dds_counterparty():
             logger = LoggingMixin().log
             client = tg_sur.get_clickhouse_client()
             logger.info("Подключение к ClickHouse успешно выполнено")
-            p_version_prev = p_version['p_version_prev'][name_src_tbl]
-            p_version_new = p_version['p_version_new'][name_src_tbl]
+            p_version_prev = p_version['p_version_prev'][name_src_tbl][:19]
+            p_version_new = p_version['p_version_new'][name_src_tbl][:19]
             query = f"""
             CREATE TABLE {tmp_table_name} 
             ENGINE = MergeTree()
@@ -346,8 +346,8 @@ def wf_app_mdlp_stg_dds_counterparty():
             logger = LoggingMixin().log
             client = tg_sur.get_clickhouse_client()
             logger.info("Подключение к ClickHouse успешно выполнено")
-            p_version_prev = p_version['p_version_prev'][name_src_tbl]
-            p_version_new = p_version['p_version_new'][name_src_tbl]
+            p_version_prev = p_version['p_version_prev'][name_src_tbl][:19]
+            p_version_new = p_version['p_version_new'][name_src_tbl][:19]
             query = f"""
             CREATE TABLE {tmp_table_name} 
             ENGINE = MergeTree()
@@ -394,8 +394,8 @@ def wf_app_mdlp_stg_dds_counterparty():
             logger = LoggingMixin().log
             client = tg_sur.get_clickhouse_client()
             logger.info("Подключение к ClickHouse успешно выполнено")
-            p_version_prev = p_version['p_version_prev'][name_src_tbl]
-            p_version_new = p_version['p_version_new'][name_src_tbl]
+            p_version_prev = p_version['p_version_prev'][name_src_tbl][:19]
+            p_version_new = p_version['p_version_new'][name_src_tbl][:19]
             query = f"""
             CREATE TABLE {tmp_table_name} 
             ENGINE = MergeTree()
