@@ -119,30 +119,58 @@ def cf_dsm_mart_dsm_sale_data():
     @task
     def trigger_dags(periods, **kwargs):
         for period in periods:
-            logger.info(period)
-            logger.info(period.format('YYYY-MM-DD'))
             short_id = uuid.uuid4().hex[:8], 
             logger.info(short_id[0])
             logger.info(f"RUN_ID: triggered_by_{short_id[0]}_{kwargs['dag_run'].run_id}")
+            run_id=f"triggered_by_{short_id[0]}_{kwargs['dag_run'].run_id}"
             trigger = trigger_dag(
                 dag_id='wf_dsm_mart_dsm_sale_data',
-                run_id=f"triggered_by_{short_id[0]}_{kwargs['dag_run'].run_id}",
+                run_id=run_id,
                 conf={'loading_month': period.format('YYYY-MM-DD')},
                 execution_date=None,
-                replace_microseconds=False#,
-                #wait_for_completion=True # ждать завершения DAG перед следующим
+                replace_microseconds=False
             )
-            # trigger = TriggerDagRunOperator(
-            #     task_id=f"trigger_{period.format('YYYY-MM-DD')}",
-            #     #dag_id = 'wf_dsm_mart_dsm_sale_data',
-            #     trigger_dag_id='wf_dsm_mart_dsm_sale_data',
-            #     conf={'loading_month': period.format('YYYY-MM-DD')},
-            #     wait_for_completion=True # ждать завершения DAG перед следующим
-            # )
             if not trigger:
                 raise RuntimeError("Не удалось запустить дочерний DAG")
             else:
                 logger.info(f"Запущен триггер на вызов потока: wf_dsm_mart_dsm_sale_data за период {period.format('YYYY-MM-DD')}")
+            
+            # запуск ожидания прогрузки потока
+            wait_for_dag_completion('wf_dsm_mart_dsm_sale_data', run_id)
+        
+            logger.info(f"Завершен DAG для периода {period.format('YYYY-MM-DD')}")
+    
+        return True
+
+    def wait_for_dag_completion(dag_id, run_id, check_interval=30):
+        """Функция ожидания завершения DAG (упрощенная версия)"""
+        from airflow.api.common.experimental.get_dag_runs import get_dag_runs
+        from airflow.utils.state import State
+        import time
+        
+        while True:
+            # Получаем статус DAG run
+            dag_runs = get_dag_runs(dag_id)
+            logger.info(f"dag_runs: {dag_runs}")
+            current_run = None
+            
+            for dr in dag_runs:
+                if dr.run_id == run_id:
+                    current_run = dr
+                    break
+            
+            if not current_run:
+                logger.warning(f"DAG run {run_id} не найден")
+                break
+                
+            if current_run.state in [State.SUCCESS, State.FAILED]:
+                logger.info(f"DAG run {run_id} завершен со статусом: {current_run.state}")
+                if current_run.state == State.FAILED:
+                    raise Exception(f"DAG {dag_id} завершился с ошибкой")
+                break
+                
+            logger.info(f"Ожидание завершения DAG {run_id}... Текущий статус: {current_run.state}")
+            time.sleep(check_interval)
 
     task1 = create_date_parametrs()
     if task1:
