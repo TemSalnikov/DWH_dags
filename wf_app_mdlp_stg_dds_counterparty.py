@@ -117,7 +117,7 @@ def wf_app_mdlp_stg_dds_counterparty():
             WHERE processed_dttm BETWEEN '{p_version_prev}' AND '{p_version_new}'
             """
             
-            logger.info(f"Создан запрос для алгоритма 1: {tmp_table_name}")
+            logger.info(f"Создан запрос для алгоритма 1: {tmp_table_name}: \n {query}")
             client.execute(query)
             logger.info(f"Создана временная таблица {tmp_table_name} для алгоритма 1")
             
