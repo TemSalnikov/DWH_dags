@@ -113,8 +113,7 @@ def wf_app_mdlp_stg_dds_counterparty():
                                                                         ),
                                                                         '\\s+', ' ' )
                                                                     )) as salepoint_business_key
-            FROM stg.v_iv_mart_mdlp_general_report_on_disposal
-            WHERE processed_dttm BETWEEN '{p_version_prev}' AND '{p_version_new}'
+            FROM stg.v_iv_mart_mdlp_general_report_on_disposal(p_from_dttm = '{p_version_prev}', p_to_dttm = '{p_version_new}')
             """
             
             logger.info(f"Создан запрос для алгоритма 1: {tmp_table_name}: \n {query}")
@@ -161,8 +160,7 @@ def wf_app_mdlp_stg_dds_counterparty():
                 toDateTime('1990-01-01 00:01:01') as effective_dttm,
                 2 as algorithm_type,
                 concat(toString(tin_to_the_issuer), '^^', 'DEFAULT_SALEPOINT') as salepoint_business_key
-            FROM stg.v_iv_mart_mdlp_general_report_on_disposal
-            WHERE processed_dttm BETWEEN '{p_version_prev}' AND '{p_version_new}'
+            FROM stg.v_iv_mart_mdlp_general_report_on_disposal(p_from_dttm = '{p_version_prev}', p_to_dttm = '{p_version_new}')
             """
             
             logger.info(f"Создан запрос для алгоритма 2: {tmp_table_name}")
@@ -209,8 +207,7 @@ def wf_app_mdlp_stg_dds_counterparty():
                 toDateTime('1990-01-01 00:01:01') as effective_dttm,
                 3 as algorithm_type,
                 concat(toString(tin_to_the_issuer), '^^', 'DEFAULT_SALEPOINT') as salepoint_business_key
-            FROM stg.v_iv_mart_mdlp_general_pricing_report
-            WHERE processed_dttm BETWEEN '{p_version_prev}' AND '{p_version_new}'
+            FROM stg.v_iv_mart_mdlp_general_pricing_report(p_from_dttm = '{p_version_prev}', p_to_dttm = '{p_version_new}')
             """
             
             logger.info(f"Создан запрос для алгоритма 3: {tmp_table_name}")
@@ -257,8 +254,7 @@ def wf_app_mdlp_stg_dds_counterparty():
                 toDateTime('1990-01-01 00:01:01') as effective_dttm,
                 4 as algorithm_type,
                 concat(toString(tin_of_the_participant), '^^', 'DEFAULT_SALEPOINT') as salepoint_business_key
-            FROM stg.v_iv_mart_mdlp_general_pricing_report
-            WHERE processed_dttm BETWEEN '{p_version_prev}' AND '{p_version_new}'
+            FROM stg.v_iv_mart_mdlp_general_pricing_report(p_from_dttm = '{p_version_prev}', p_to_dttm = '{p_version_new}')
             """
             
             logger.info(f"Создан запрос для алгоритма 4: {tmp_table_name}")
@@ -305,8 +301,7 @@ def wf_app_mdlp_stg_dds_counterparty():
                 toDateTime('1990-01-01 00:01:01') as effective_dttm,
                 5 as algorithm_type,
                 concat(toString(tin_to_the_issuer), '^^', 'DEFAULT_SALEPOINT') as salepoint_business_key
-            FROM stg.v_iv_mart_mdlp_general_report_on_movement
-            WHERE processed_dttm BETWEEN '{p_version_prev}' AND '{p_version_new}'
+            FROM stg.v_iv_mart_mdlp_general_report_on_movement(p_from_dttm = '{p_version_prev}', p_to_dttm = '{p_version_new}')
             """
             
             logger.info(f"Создан запрос для алгоритма 5: {tmp_table_name}")
@@ -353,8 +348,7 @@ def wf_app_mdlp_stg_dds_counterparty():
                 toDateTime('1990-01-01 00:01:01') as effective_dttm,
                 6 as algorithm_type,
                 concat(toString(tin_of_the_sender), '^^', 'DEFAULT_SALEPOINT') as salepoint_business_key
-            FROM stg.v_iv_mart_mdlp_general_report_on_movement
-            WHERE processed_dttm BETWEEN '{p_version_prev}' AND '{p_version_new}'
+            FROM stg.v_iv_mart_mdlp_general_report_on_movement(p_from_dttm = '{p_version_prev}', p_to_dttm = '{p_version_new}')
             """
             
             logger.info(f"Создан запрос для алгоритма 6: {tmp_table_name}")
@@ -401,8 +395,7 @@ def wf_app_mdlp_stg_dds_counterparty():
                 toDateTime('1990-01-01 00:01:01') as effective_dttm,
                 7 as algorithm_type,
                 concat(toString(tin_of_the_recipient), '^^', 'DEFAULT_SALEPOINT') as salepoint_business_key
-            FROM stg.v_iv_mart_mdlp_general_report_on_movement
-            WHERE processed_dttm BETWEEN '{p_version_prev}' AND '{p_version_new}'
+            FROM stg.v_iv_mart_mdlp_general_report_on_movement(p_from_dttm = '{p_version_prev}', p_to_dttm = '{p_version_new}')
             """
             
             logger.info(f"Создан запрос для алгоритма 7: {tmp_table_name}")
