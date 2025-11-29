@@ -125,7 +125,7 @@ def cf_dsm_mart_dsm_sale_data():
             logger.info(f"RUN_ID: triggered_by_{short_id[0]}_{kwargs['dag_run'].run_id}")
             trigger = trigger_dag(
                 dag_id='wf_dsm_mart_dsm_sale_data',
-                run_id=f"triggered_by_{short_id}_{kwargs['dag_run'].run_id}",
+                run_id=f"triggered_by_{short_id[0]}_{kwargs['dag_run'].run_id}",
                 conf={'loading_month': period.format('YYYY-MM-DD')},
                 execution_date=None,
                 replace_microseconds=False#,
