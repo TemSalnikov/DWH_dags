@@ -120,14 +120,13 @@ def cf_dsm_mart_dsm_sale_data():
         for period in periods:
             logger.info(period)
             logger.info(period.format('YYYY-MM-DD'))
-            short_id = uuid.uuid4().hex[:8], 
             trigger = trigger_dag(
                 dag_id='wf_dsm_mart_dsm_sale_data',
                 run_id=f"triggered_by_{short_id}_{kwargs['dag_run'].run_id}",
                 conf={'loading_month': period.format('YYYY-MM-DD')},
                 execution_date=None,
-                replace_microseconds=False#,
-                #wait_for_completion=True # ждать завершения DAG перед следующим
+                replace_microseconds=False,
+                wait_for_completion=True # ждать завершения DAG перед следующим
             )
             # trigger = TriggerDagRunOperator(
             #     task_id=f"trigger_{period.format('YYYY-MM-DD')}",
