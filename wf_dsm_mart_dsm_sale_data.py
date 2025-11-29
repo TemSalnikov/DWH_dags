@@ -10,7 +10,11 @@ from airflow.models import Param
 import pendulum
 import uuid
 from airflow.exceptions import AirflowSkipException
-from libs.functions_dwh.functions_dsm import get_oracle_connection, create_connection_psycopg2, compute_row_hash, save_meta, check_meta_start_dt_loading
+
+script_path = os.path.abspath(__file__)
+project_path = os.path.dirname(script_path)+'/libs'
+sys.path.append(project_path)
+from functions_dwh.functions_dsm import get_oracle_connection, create_connection_psycopg2, compute_row_hash, save_meta, check_meta_start_dt_loading
 
 # Настройка логирования
 logger = LoggingMixin().log
