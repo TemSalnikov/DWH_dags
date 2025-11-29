@@ -11,6 +11,7 @@ sys.path.append(project_path)
 import dds_group_tasks.task_group_creation_surogate as tg_sur
 import dds_group_tasks.task_group_creation_surogate_salepoint as tg_sur_salepoint
 from functions_dwh.functions_dds import load_delta, save_meta
+import json
 
 
 
@@ -63,9 +64,17 @@ def wf_app_mdlp_stg_dds_counterparty():
     @task
     def prepare_parameters(data_ready: bool, **context) -> dict:
         if data_ready:
+            logger = LoggingMixin().log
             dag_run_conf = context["dag_run"].conf if "dag_run" in context else {}
-            parameters = {**context["params"], **dag_run_conf}
-            return parameters
+            for name_par, val_par in context["params"].items():
+                dag_run_conf[name_par] = json.load(val_par)
+            
+            logger.info(f"Получен набор параметров: {context["params"]}")
+            logger.info(f"Обработанный набор параметров набор параметров: {dag_run_conf}")
+            parameters = {**context["params"]
+                        #   , **dag_run_conf
+                          }
+            return dag_run_conf
         else: 
             raise Exception("Data not ready")
 
