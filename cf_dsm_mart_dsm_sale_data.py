@@ -122,7 +122,8 @@ def cf_dsm_mart_dsm_sale_data():
             logger.info(period.format('YYYY-MM-DD'))
             trigger = trigger_dag(
                 dag_id='wf_dsm_mart_dsm_sale_data',
-                run_id=f"triggered_by_{kwargs['dag_run'].run_id}",
+                my_timestamp = datetime.now().strftime('%H%M%S')
+                run_id=f"triggered_by_{my_timestamp}_{kwargs['dag_run'].run_id}",
                 conf={'loading_month': period.format('YYYY-MM-DD')},
                 execution_date=None,
                 replace_microseconds=False#,
