@@ -120,7 +120,7 @@ def cf_dsm_mart_dsm_sale_data():
         for period in periods:
             logger.info(period)
             logger.info(period.format('YYYY-MM-DD'))
-            short_id = str(uuid.uuid4())[:8], 
+            short_id = uuid.uuid4().hex[:8], 
             trigger = trigger_dag(
                 dag_id='wf_dsm_mart_dsm_sale_data',
                 run_id=f"triggered_by_{short_id}_{kwargs['dag_run'].run_id}",
