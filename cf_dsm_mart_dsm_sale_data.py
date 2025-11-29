@@ -117,10 +117,14 @@ def cf_dsm_mart_dsm_sale_data():
 
     @task
     def trigger_dags(periods, **kwargs):
+        # Создаем триггеры последовательно
+        prev_trigger = None
+
         for period in periods:
             logger.info(period)
             logger.info(period.format('YYYY-MM-DD'))
-            short_id = uuid.uuid4().hex[:8], 
+            short_id = uuid.uuid4().hex[:8]
+
             #logger.info(short_id[0])
             #logger.info(f"RUN_ID: triggered_by_{short_id[0]}_{kwargs['dag_run'].run_id}")
             # trigger = trigger_dag(
@@ -131,9 +135,10 @@ def cf_dsm_mart_dsm_sale_data():
             #     replace_microseconds=False#,
                 #wait_for_completion=True # ждать завершения DAG перед следующим
             # )
+            
             trigger = TriggerDagRunOperator(
                 task_id=f"trigger_{period.format('YYYY-MM-DD')}_{short_id[0]}",
-                dag_id = 'wf_dsm_mart_dsm_sale_data',
+                #dag_id = 'wf_dsm_mart_dsm_sale_data',
                 trigger_dag_id='wf_dsm_mart_dsm_sale_data',
                 conf={'loading_month': period.format('YYYY-MM-DD')},
                 wait_for_completion=True # ждать завершения DAG перед следующим
