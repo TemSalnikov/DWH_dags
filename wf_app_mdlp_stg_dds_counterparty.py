@@ -81,10 +81,12 @@ def wf_app_mdlp_stg_dds_counterparty():
 
     # Алгоритм 1: mart_mdlp_general_report_on_disposal (полные данные участника)
     @task
-    def get_inc_load_data_algo1(p_version_prev: str, p_version_new: str) -> str:
+    def get_inc_load_data_algo1(p_version: dict) -> str:
         client = None
         tmp_table_name = f"tmp.tmp_algo1_{tg_sur.uuid.uuid4().hex}"
-        
+        logger.info(f"получены параметры: {p_version}: {type(p_version)}")
+        p_version_prev = p_version['p_version_prev']['mart_mdlp_general_report_on_disposal']
+        p_version_new = p_version['p_version_new']['mart_mdlp_general_report_on_disposal']
         try:
             logger = LoggingMixin().log
             client = tg_sur.get_clickhouse_client()
@@ -529,13 +531,21 @@ def wf_app_mdlp_stg_dds_counterparty():
     parameters_task = prepare_parameters(check_task)
     
     # Параллельное выполнение всех алгоритмов
-    algo1_task = get_inc_load_data_algo1(parameters_task['p_version_prev']['mart_mdlp_general_report_on_disposal'], parameters_task['p_version_new']['mart_mdlp_general_report_on_disposal'])
+    algo1_task = get_inc_load_data_algo1(parameters_task)
     algo2_task = get_inc_load_data_algo2(parameters_task['p_version_prev']['mart_mdlp_general_report_on_disposal'], parameters_task['p_version_new']['mart_mdlp_general_report_on_disposal'])
-    algo3_task = get_inc_load_data_algo3(parameters_task['p_version_prev']['mdlp_general_pricing_report'], parameters_task['p_version_new']['mdlp_general_pricing_report'])
-    algo4_task = get_inc_load_data_algo4(parameters_task['p_version_prev']['mdlp_general_pricing_report'], parameters_task['p_version_new']['mdlp_general_pricing_report'])
-    algo5_task = get_inc_load_data_algo5(parameters_task['p_version_prev']['mdlp_general_pricing_report'], parameters_task['p_version_new']['mdlp_general_pricing_report'])
+    algo3_task = get_inc_load_data_algo3(parameters_task['p_version_prev']['mart_mdlp_general_pricing_report'], parameters_task['p_version_new']['mart_mdlp_general_pricing_report'])
+    algo4_task = get_inc_load_data_algo4(parameters_task['p_version_prev']['mart_mdlp_general_pricing_report'], parameters_task['p_version_new']['mart_mdlp_general_pricing_report'])
+    algo5_task = get_inc_load_data_algo5(parameters_task['p_version_prev']['mart_mdlp_general_pricing_report'], parameters_task['p_version_new']['mart_mdlp_general_pricing_report'])
     algo6_task = get_inc_load_data_algo6(parameters_task['p_version_prev']['v_iv_mart_mdlp_general_report_on_movement'], parameters_task['p_version_new']['v_iv_mart_mdlp_general_report_on_movement'])
     algo7_task = get_inc_load_data_algo7(parameters_task['p_version_prev']['v_iv_mart_mdlp_general_report_on_movement'], parameters_task['p_version_new']['v_iv_mart_mdlp_general_report_on_movement'])
+    # Параллельное выполнение всех алгоритмов
+    # algo1_task = get_inc_load_data_algo1(parameters_task['p_version_prev']['mart_mdlp_general_report_on_disposal'], parameters_task['p_version_new']['mart_mdlp_general_report_on_disposal'])
+    # algo2_task = get_inc_load_data_algo2(parameters_task['p_version_prev']['mart_mdlp_general_report_on_disposal'], parameters_task['p_version_new']['mart_mdlp_general_report_on_disposal'])
+    # algo3_task = get_inc_load_data_algo3(parameters_task['p_version_prev']['mart_mdlp_general_pricing_report'], parameters_task['p_version_new']['mart_mdlp_general_pricing_report'])
+    # algo4_task = get_inc_load_data_algo4(parameters_task['p_version_prev']['mart_mdlp_general_pricing_report'], parameters_task['p_version_new']['mart_mdlp_general_pricing_report'])
+    # algo5_task = get_inc_load_data_algo5(parameters_task['p_version_prev']['mart_mdlp_general_pricing_report'], parameters_task['p_version_new']['mart_mdlp_general_pricing_report'])
+    # algo6_task = get_inc_load_data_algo6(parameters_task['p_version_prev']['v_iv_mart_mdlp_general_report_on_movement'], parameters_task['p_version_new']['v_iv_mart_mdlp_general_report_on_movement'])
+    # algo7_task = get_inc_load_data_algo7(parameters_task['p_version_prev']['v_iv_mart_mdlp_general_report_on_movement'], parameters_task['p_version_new']['v_iv_mart_mdlp_general_report_on_movement'])
     
     # Объединение результатов всех алгоритмов
     union_table_task = union_all_algorithms(algo1_task, algo2_task, algo3_task, algo4_task, 
