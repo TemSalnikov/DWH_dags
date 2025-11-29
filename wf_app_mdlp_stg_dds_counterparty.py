@@ -74,6 +74,7 @@ def wf_app_mdlp_stg_dds_counterparty():
             parameters = {**context["params"]
                         #   , **dag_run_conf
                           }
+            logger.info(f"Получен набор параметров: {parameters}, {type(parameters)}")
             return parameters
         else: 
             raise Exception("Data not ready")
