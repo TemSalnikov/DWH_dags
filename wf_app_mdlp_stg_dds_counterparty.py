@@ -67,7 +67,7 @@ def wf_app_mdlp_stg_dds_counterparty():
             logger = LoggingMixin().log
             dag_run_conf = context["dag_run"].conf if "dag_run" in context else {}
             for name_par, val_par in context["params"].items():
-                dag_run_conf[name_par] = json.load(val_par)
+                dag_run_conf[name_par] = json.loads(val_par)
             
             # logger.info(f"Получен набор параметров: {context["params"]}")
             logger.info(f"Обработанный набор параметров набор параметров: {dag_run_conf}")
