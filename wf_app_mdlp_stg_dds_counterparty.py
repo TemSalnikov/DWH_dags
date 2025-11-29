@@ -81,14 +81,16 @@ def wf_app_mdlp_stg_dds_counterparty():
 
     # Алгоритм 1: mart_mdlp_general_report_on_disposal (полные данные участника)
     @task
-    def get_inc_load_data_algo1(p_version: dict) -> str:
+    def get_inc_load_data_algo1(p_version: dict, name_src_tbl:str) -> str:
         client = None
+        logger = LoggingMixin().log
         tmp_table_name = f"tmp.tmp_algo1_{tg_sur.uuid.uuid4().hex}"
         logger.info(f"получены параметры: {p_version}: {type(p_version)}")
-        p_version_prev = p_version['p_version_prev']['mart_mdlp_general_report_on_disposal']
-        p_version_new = p_version['p_version_new']['mart_mdlp_general_report_on_disposal']
+        p_version_prev = p_version['p_version_prev'][name_src_tbl]
+        p_version_new = p_version['p_version_new'][name_src_tbl]
+        logger.info(f"получены параметры: {p_version_prev}: {p_version_new}")
         try:
-            logger = LoggingMixin().log
+            
             client = tg_sur.get_clickhouse_client()
             logger.info("Подключение к ClickHouse успешно выполнено")
             
@@ -144,7 +146,7 @@ def wf_app_mdlp_stg_dds_counterparty():
 
     # Алгоритм 2: mart_mdlp_general_report_on_disposal (эмитент)
     @task
-    def get_inc_load_data_algo2(p_version_prev: str, p_version_new: str) -> str:
+    def get_inc_load_data_algo2(p_version: dict, name_src_tbl:str) -> str:
         client = None
         tmp_table_name = f"tmp.tmp_algo2_{tg_sur.uuid.uuid4().hex}"
         
@@ -152,7 +154,8 @@ def wf_app_mdlp_stg_dds_counterparty():
             logger = LoggingMixin().log
             client = tg_sur.get_clickhouse_client()
             logger.info("Подключение к ClickHouse успешно выполнено")
-            
+            p_version_prev = p_version['p_version_prev'][name_src_tbl]
+            p_version_new = p_version['p_version_new'][name_src_tbl]
             query = f"""
             CREATE TABLE {tmp_table_name} 
             ENGINE = MergeTree()
@@ -191,7 +194,7 @@ def wf_app_mdlp_stg_dds_counterparty():
 
     # Алгоритм 3: mart_mdlp_general_pricing_report (эмитент)
     @task
-    def get_inc_load_data_algo3(p_version_prev: str, p_version_new: str) -> str:
+    def get_inc_load_data_algo3(p_version: dict, name_src_tbl:str) -> str:
         client = None
         tmp_table_name = f"tmp.tmp_algo3_{tg_sur.uuid.uuid4().hex}"
         
@@ -199,7 +202,8 @@ def wf_app_mdlp_stg_dds_counterparty():
             logger = LoggingMixin().log
             client = tg_sur.get_clickhouse_client()
             logger.info("Подключение к ClickHouse успешно выполнено")
-            
+            p_version_prev = p_version['p_version_prev'][name_src_tbl]
+            p_version_new = p_version['p_version_new'][name_src_tbl]
             query = f"""
             CREATE TABLE {tmp_table_name} 
             ENGINE = MergeTree()
@@ -238,7 +242,7 @@ def wf_app_mdlp_stg_dds_counterparty():
 
     # Алгоритм 4: mart_mdlp_general_pricing_report (участник)
     @task
-    def get_inc_load_data_algo4(p_version_prev: str, p_version_new: str) -> str:
+    def get_inc_load_data_algo4(p_version: dict, name_src_tbl:str) -> str:
         client = None
         tmp_table_name = f"tmp.tmp_algo4_{tg_sur.uuid.uuid4().hex}"
         
@@ -246,7 +250,8 @@ def wf_app_mdlp_stg_dds_counterparty():
             logger = LoggingMixin().log
             client = tg_sur.get_clickhouse_client()
             logger.info("Подключение к ClickHouse успешно выполнено")
-            
+            p_version_prev = p_version['p_version_prev'][name_src_tbl]
+            p_version_new = p_version['p_version_new'][name_src_tbl]
             query = f"""
             CREATE TABLE {tmp_table_name} 
             ENGINE = MergeTree()
@@ -285,7 +290,7 @@ def wf_app_mdlp_stg_dds_counterparty():
 
     # Алгоритм 5: mart_mdlp_general_report_on_movement (эмитент)
     @task
-    def get_inc_load_data_algo5(p_version_prev: str, p_version_new: str) -> str:
+    def get_inc_load_data_algo5(p_version: dict, name_src_tbl:str) -> str:
         client = None
         tmp_table_name = f"tmp.tmp_algo5_{tg_sur.uuid.uuid4().hex}"
         
@@ -293,7 +298,8 @@ def wf_app_mdlp_stg_dds_counterparty():
             logger = LoggingMixin().log
             client = tg_sur.get_clickhouse_client()
             logger.info("Подключение к ClickHouse успешно выполнено")
-            
+            p_version_prev = p_version['p_version_prev'][name_src_tbl]
+            p_version_new = p_version['p_version_new'][name_src_tbl]
             query = f"""
             CREATE TABLE {tmp_table_name} 
             ENGINE = MergeTree()
@@ -332,7 +338,7 @@ def wf_app_mdlp_stg_dds_counterparty():
 
     # Алгоритм 6: mart_mdlp_general_report_on_movement (отправитель)
     @task
-    def get_inc_load_data_algo6(p_version_prev: str, p_version_new: str) -> str:
+    def get_inc_load_data_algo6(p_version: dict, name_src_tbl:str) -> str:
         client = None
         tmp_table_name = f"tmp.tmp_algo6_{tg_sur.uuid.uuid4().hex}"
         
@@ -340,7 +346,8 @@ def wf_app_mdlp_stg_dds_counterparty():
             logger = LoggingMixin().log
             client = tg_sur.get_clickhouse_client()
             logger.info("Подключение к ClickHouse успешно выполнено")
-            
+            p_version_prev = p_version['p_version_prev'][name_src_tbl]
+            p_version_new = p_version['p_version_new'][name_src_tbl]
             query = f"""
             CREATE TABLE {tmp_table_name} 
             ENGINE = MergeTree()
@@ -379,7 +386,7 @@ def wf_app_mdlp_stg_dds_counterparty():
 
     # Алгоритм 7: mart_mdlp_general_report_on_movement (получатель)
     @task
-    def get_inc_load_data_algo7(p_version_prev: str, p_version_new: str) -> str:
+    def get_inc_load_data_algo7(p_version: dict, name_src_tbl:str) -> str:
         client = None
         tmp_table_name = f"tmp.tmp_algo7_{tg_sur.uuid.uuid4().hex}"
         
@@ -387,7 +394,8 @@ def wf_app_mdlp_stg_dds_counterparty():
             logger = LoggingMixin().log
             client = tg_sur.get_clickhouse_client()
             logger.info("Подключение к ClickHouse успешно выполнено")
-            
+            p_version_prev = p_version['p_version_prev'][name_src_tbl]
+            p_version_new = p_version['p_version_new'][name_src_tbl]
             query = f"""
             CREATE TABLE {tmp_table_name} 
             ENGINE = MergeTree()
@@ -531,21 +539,14 @@ def wf_app_mdlp_stg_dds_counterparty():
     parameters_task = prepare_parameters(check_task)
     
     # Параллельное выполнение всех алгоритмов
-    algo1_task = get_inc_load_data_algo1(parameters_task)
-    algo2_task = get_inc_load_data_algo2(parameters_task['p_version_prev']['mart_mdlp_general_report_on_disposal'], parameters_task['p_version_new']['mart_mdlp_general_report_on_disposal'])
-    algo3_task = get_inc_load_data_algo3(parameters_task['p_version_prev']['mart_mdlp_general_pricing_report'], parameters_task['p_version_new']['mart_mdlp_general_pricing_report'])
-    algo4_task = get_inc_load_data_algo4(parameters_task['p_version_prev']['mart_mdlp_general_pricing_report'], parameters_task['p_version_new']['mart_mdlp_general_pricing_report'])
-    algo5_task = get_inc_load_data_algo5(parameters_task['p_version_prev']['mart_mdlp_general_pricing_report'], parameters_task['p_version_new']['mart_mdlp_general_pricing_report'])
-    algo6_task = get_inc_load_data_algo6(parameters_task['p_version_prev']['v_iv_mart_mdlp_general_report_on_movement'], parameters_task['p_version_new']['v_iv_mart_mdlp_general_report_on_movement'])
-    algo7_task = get_inc_load_data_algo7(parameters_task['p_version_prev']['v_iv_mart_mdlp_general_report_on_movement'], parameters_task['p_version_new']['v_iv_mart_mdlp_general_report_on_movement'])
-    # Параллельное выполнение всех алгоритмов
-    # algo1_task = get_inc_load_data_algo1(parameters_task['p_version_prev']['mart_mdlp_general_report_on_disposal'], parameters_task['p_version_new']['mart_mdlp_general_report_on_disposal'])
-    # algo2_task = get_inc_load_data_algo2(parameters_task['p_version_prev']['mart_mdlp_general_report_on_disposal'], parameters_task['p_version_new']['mart_mdlp_general_report_on_disposal'])
-    # algo3_task = get_inc_load_data_algo3(parameters_task['p_version_prev']['mart_mdlp_general_pricing_report'], parameters_task['p_version_new']['mart_mdlp_general_pricing_report'])
-    # algo4_task = get_inc_load_data_algo4(parameters_task['p_version_prev']['mart_mdlp_general_pricing_report'], parameters_task['p_version_new']['mart_mdlp_general_pricing_report'])
-    # algo5_task = get_inc_load_data_algo5(parameters_task['p_version_prev']['mart_mdlp_general_pricing_report'], parameters_task['p_version_new']['mart_mdlp_general_pricing_report'])
-    # algo6_task = get_inc_load_data_algo6(parameters_task['p_version_prev']['v_iv_mart_mdlp_general_report_on_movement'], parameters_task['p_version_new']['v_iv_mart_mdlp_general_report_on_movement'])
-    # algo7_task = get_inc_load_data_algo7(parameters_task['p_version_prev']['v_iv_mart_mdlp_general_report_on_movement'], parameters_task['p_version_new']['v_iv_mart_mdlp_general_report_on_movement'])
+    algo1_task = get_inc_load_data_algo1(parameters_task, name_src_tbl = 'mart_mdlp_general_report_on_disposal')
+    algo2_task = get_inc_load_data_algo2(parameters_task, name_src_tbl = 'mart_mdlp_general_report_on_disposal')
+    algo3_task = get_inc_load_data_algo3(parameters_task, name_src_tbl = 'mart_mdlp_general_pricing_report')
+    algo4_task = get_inc_load_data_algo4(parameters_task,name_src_tbl = 'mart_mdlp_general_pricing_report')
+    algo5_task = get_inc_load_data_algo5(parameters_task,name_src_tbl = 'mart_mdlp_general_pricing_report')
+    algo6_task = get_inc_load_data_algo6(parameters_task,name_src_tbl = 'mart_mdlp_general_report_on_movement')
+    algo7_task = get_inc_load_data_algo7(parameters_task, name_src_tbl = 'mart_mdlp_general_report_on_movement')
+    
     
     # Объединение результатов всех алгоритмов
     union_table_task = union_all_algorithms(algo1_task, algo2_task, algo3_task, algo4_task, 
