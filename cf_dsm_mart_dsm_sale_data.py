@@ -14,6 +14,7 @@ from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 import psycopg2
 import libs.functions_dwh.functions_dsm
 from airflow.api.common.trigger_dag import trigger_dag
+from airflow.sensors.external_task import ExternalTaskSensor
 
 # Настройка логирования
 logger = LoggingMixin().log
@@ -118,39 +119,56 @@ def cf_dsm_mart_dsm_sale_data():
     @task
     def trigger_dags(periods, **kwargs):
         # Создаем триггеры последовательно
-        for period in periods:
+        for i, period in enumerate(periods):
             logger.info(period)
             logger.info(period.format('YYYY-MM-DD'))
             short_id = uuid.uuid4().hex[:8]
 
-            #logger.info(short_id[0])
-            #logger.info(f"RUN_ID: triggered_by_{short_id[0]}_{kwargs['dag_run'].run_id}")
-            # trigger = trigger_dag(
-            #     dag_id='wf_dsm_mart_dsm_sale_data',
-            #     run_id=f"triggered_by_{short_id[0]}_{kwargs['dag_run'].run_id}",
-            #     conf={'loading_month': period.format('YYYY-MM-DD')},
-            #     execution_date=None,
-            #     replace_microseconds=False#,
-                #wait_for_completion=True # ждать завершения DAG перед следующим
-            # )
-            
             trigger = TriggerDagRunOperator(
                 task_id=f"trigger_{period.format('YYYY-MM-DD')}_{short_id[0]}",
                 trigger_dag_id='wf_dsm_mart_dsm_sale_data',
                 conf={'loading_month': period.format('YYYY-MM-DD')},
-                wait_for_completion=True, # ждать завершения DAG перед следующим
+                wait_for_completion=False, # ждать завершения DAG перед следующим
                 dag=dag
             )
+            # Сенсор для ожидания завершения предыдущего DAG
+            if i > 0:
+                wait_task = ExternalTaskSensor(
+                    task_id=f"wait_for_previous_{i}_{short_id[0]}",
+                    external_dag_id='wf_dsm_mart_dsm_sale_data',
+                    external_task_id=None,  # Ждем завершения всего DAG
+                    allowed_states=['success', 'failed'],
+                    dag=dag
+                )
+                tasks[-1] >> wait_task >> trigger
+            
+                tasks.append(trigger)
+            
+            return tasks
 
-            if not trigger:
-                raise RuntimeError("Не удалось запустить дочерний DAG")
-            else:
-                logger.info(f"Запущен триггер на вызов потока: wf_dsm_mart_dsm_sale_data за период {period.format('YYYY-MM-DD')}")
+    # В DAG:
+    periods = create_date_parametrs()
+    trigger_chain = trigger_dags(periods)
 
-    task1 = create_date_parametrs()
-    if task1:
-        trigger_task = trigger_dags(task1)
+            #if not trigger:
+            #    raise RuntimeError("Не удалось запустить дочерний DAG")
+            #else:
+            #    logger.info(f"Запущен триггер на вызов потока: wf_dsm_mart_dsm_sale_data за период {period.format('YYYY-MM-DD')}")
 
-    task1 >> trigger_task
+    #task1 = create_date_parametrs()
+    #if task1:
+    #    trigger_task = trigger_dags(task1)
+
+    #task1 >> trigger_task        
+    #logger.info(short_id[0])
+    #logger.info(f"RUN_ID: triggered_by_{short_id[0]}_{kwargs['dag_run'].run_id}")
+    # trigger = trigger_dag(
+    #     dag_id='wf_dsm_mart_dsm_sale_data',
+    #     run_id=f"triggered_by_{short_id[0]}_{kwargs['dag_run'].run_id}",
+    #     conf={'loading_month': period.format('YYYY-MM-DD')},
+    #     execution_date=None,
+    #     replace_microseconds=False#,
+        #wait_for_completion=True # ждать завершения DAG перед следующим
+    # )
 
 cf_dsm_mart_dsm_sale_data()
