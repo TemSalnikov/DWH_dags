@@ -11,6 +11,7 @@ import pendulum
 import uuid
 from airflow.exceptions import AirflowSkipException
 import os
+import sys 
 
 script_path = os.path.abspath(__file__)
 project_path = os.path.dirname(script_path)+'/libs'
