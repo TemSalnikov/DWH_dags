@@ -15,6 +15,11 @@ import psycopg2
 import libs.functions_dwh.functions_dsm
 from airflow.api.common.trigger_dag import trigger_dag
 from airflow.sensors.external_task import ExternalTaskSensor
+from airflow.utils.state import State
+import time
+#from airflow.models.dagrun import DagRun
+from airflow.models import DagRun
+from airflow.utils.session import provide_session
 
 # Настройка логирования
 logger = LoggingMixin().log
@@ -50,17 +55,12 @@ def check_and_split_date_range(start_date, end_date):
         print(f"Ошибка при вводе периода прогрузки: {str(e)}")
         raise
 
-def wait_for_dag_completion(dag_id, run_id, check_interval=30):
+@provide_session
+def wait_for_dag_completion(dag_id, run_id, check_interval=30, session=None):
     """Функция ожидания завершения DAG (упрощенная версия)"""
-    from airflow.utils.state import State
-    import time
-    #from airflow.models.dagrun import DagRun
-    from airflow.models import DagRun
-    from airflow.utils.session import provide_session
-    
     while True:
         # Получаем статус DAG run
-        dag_run = session.query(DagRun).filter(DagRun.run_id == dag_run_id).first()
+        dag_run = session.query(DagRun).filter(DagRun.run_id == run_id).first()
         dag_run_state = dag_run.state
             
         if dag_run_state in [State.SUCCESS, State.FAILED]:
