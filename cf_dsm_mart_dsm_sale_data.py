@@ -51,34 +51,26 @@ def check_and_split_date_range(start_date, end_date):
         raise
 
 def wait_for_dag_completion(dag_id, run_id, check_interval=30):
-        """Функция ожидания завершения DAG (упрощенная версия)"""
-        from airflow.api.common.experimental.get_dag_runs import get_dag_runs
-        from airflow.utils.state import State
-        import time
-        
-        while True:
-            # Получаем статус DAG run
-            dag_runs = get_dag_runs(dag_id)
-            logger.info(f"dag_runs: {dag_runs}")
-            current_run = None
+    """Функция ожидания завершения DAG (упрощенная версия)"""
+    from airflow.utils.state import State
+    import time
+    #from airflow.models.dagrun import DagRun
+    from airflow.models import DagRun
+    from airflow.utils.session import provide_session
+    
+    while True:
+        # Получаем статус DAG run
+        dag_run = session.query(DagRun).filter(DagRun.run_id == dag_run_id).first()
+        dag_run_state = dag_run.state
             
-            for dr in dag_runs:
-                if dr.run_id == run_id:
-                    current_run = dr
-                    break
+        if dag_run_state in [State.SUCCESS, State.FAILED]:
+            logger.info(f"DAG run {run_id} завершен со статусом: {dag_run_state}")
+            if dag_run_state == State.FAILED:
+                raise Exception(f"DAG {dag_id} завершился с ошибкой")
+            break
             
-            if not current_run:
-                logger.warning(f"DAG run {run_id} не найден")
-                break
-                
-            if current_run.state in [State.SUCCESS, State.FAILED]:
-                logger.info(f"DAG run {run_id} завершен со статусом: {current_run.state}")
-                if current_run.state == State.FAILED:
-                    raise Exception(f"DAG {dag_id} завершился с ошибкой")
-                break
-                
-            logger.info(f"Ожидание завершения DAG {run_id}... Текущий статус: {current_run.state}")
-            time.sleep(check_interval)
+        logger.info(f"Ожидание завершения DAG {run_id}... Текущий статус: {dag_run_state}")
+        time.sleep(check_interval)
 
 @dag(
     dag_id='cf_dsm_mart_dsm_sale_data',
