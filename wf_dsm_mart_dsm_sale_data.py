@@ -44,12 +44,22 @@ def wf_dsm_mart_dsm_sale_data():
         dag_run = kwargs.get('dag_run')
         if dag_run and dag_run.conf:
             loading_month = dag_run.conf.get('loading_month')
-            logger.info(f"Введена дата прогрузки данных, где loading_month = {loading_month}")              
-            return loading_month
+            if loading_month:
+                logger.info(f"Введена дата прогрузки данных, где loading_month = {loading_month}")              
+                return loading_month
+        # Если параметр не передан, используем значение по умолчанию
+        params = kwargs.get('params', {})
+        loading_month = params.get('loading_month', '1900-01-01')
+        logger.info(f"Используется дата прогрузки по умолчанию: {loading_month}")
+        return loading_month
         
     @task.short_circuit # (pool='sequential_processing', pool_slots=1) # декоратор для условного последовательного выполнения
     def check_new_data_altay_data(loading_month, **kwargs):
         """Проверка наличия новых данных из V$ALTAY_DATA """
+        if not loading_month:
+            logger.error("Параметр loading_month не передан")
+            raise ValueError("Параметр loading_month обязателен")
+        
         tmp_table_name = f"tmp.tmp_{tgt_table_name}_{uuid.uuid4().hex}" # Название для временной таблицы
         logger.info(f"___________Дата прогрузки: {loading_month}__________")
         oracle_query = f"""SELECT * from {src_table_name} where to_char(stat_date, 'yyyy-mm-dd') = :loading_month""" 
