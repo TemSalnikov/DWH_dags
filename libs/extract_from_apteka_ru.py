@@ -29,7 +29,7 @@ def extract_sales_xls(path='', name_report='Продажи', name_pharm_chain='�
     try:
         start_date, end_date = get_dates_from_filename(path)
         loger.info(f'Период отчета, извлеченный из файла: {start_date.date()} - {end_date.date()}')
-        df = pd.read_excel(path, header=None, engine='xlrd')
+        df = pd.read_excel(path, header=None)
         df = df.astype(str)
         loger.info(f'Успешно прочитано {len(df)} строк из файла.')
         
