@@ -19,7 +19,7 @@ from airflow.utils.state import State
 import time
 #from airflow.models.dagrun import DagRun
 from airflow.models import DagRun
-from airflow.utils.session import provide_session
+from airflow.utils.session import create_session
 
 # Настройка логирования
 logger = LoggingMixin().log
@@ -55,15 +55,16 @@ def check_and_split_date_range(start_date, end_date):
         print(f"Ошибка при вводе периода прогрузки: {str(e)}")
         raise
 
-@provide_session
+# @provide_session
 def wait_for_dag_completion(dag_id, run_id, check_interval=30, session=None):
     """Функция ожидания завершения DAG (упрощенная версия)"""
     while True:
         # Получаем статус DAG run
-        dag_run = session.query(DagRun).filter(DagRun.run_id == run_id).first()
-        logger.info(f"dag_run: {session.query(DagRun).filter(DagRun.run_id == run_id)}")
-        logger.info(f"dag_run.first(): {session.query(DagRun).filter(DagRun.run_id == run_id).first()}")
-        dag_run_state = dag_run.state
+        with create_session() as session:
+            dag_run = session.query(DagRun).filter(DagRun.run_id == run_id).first()
+            logger.info(f"dag_run: {session.query(DagRun).filter(DagRun.run_id == run_id)}")
+            logger.info(f"dag_run.first(): {session.query(DagRun).filter(DagRun.run_id == run_id).first()}")
+            dag_run_state = dag_run.state
             
         if dag_run_state in [State.SUCCESS, State.FAILED]:
             logger.info(f"DAG run {run_id} завершен со статусом: {dag_run_state}")
