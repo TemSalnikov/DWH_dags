@@ -30,8 +30,7 @@ def get_clickhouse_client():
         host=CLICKHOUSE_CONN['host'],
         port=CLICKHOUSE_CONN['port'],
         user=CLICKHOUSE_CONN['user'],
-        password=CLICKHOUSE_CONN['password'],
-        database=CLICKHOUSE_CONN['database']
+        password=CLICKHOUSE_CONN['password']
     )
     except ClickhouseError as e:
         logger.error(f"Ошибка подключения к ClickHouse: {e}")
