@@ -113,7 +113,7 @@ def wf_dsm_mart_dsm_sale_data():
                                                         deleted_flag=0,
                                                         hash_diff=lambda df: df.apply(compute_row_hash, columns=hash_cols, axis=1)  # Хеш для выбранных столбцов
                                                     ).rename(columns={'stat_date': 'effective_dttm'}) # переименовали колонку из целевой таблицы stat_date -> effective_dttm  
-                        logger.info(f"Запрос подготовки технических полей выполнен, получено данных: {df_click.size}")
+                        logger.info(f"Запрос подготовки технических полей выполнен, получено данных: {df_for_insert.size}")
                         # 5.1. Создание временной таблицы по новым данным из Oracle
                         create_tbl_query = f""" 
                         CREATE TABLE IF NOT EXISTS {tmp_table_name} (
