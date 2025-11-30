@@ -16,7 +16,7 @@ import sys
 script_path = os.path.abspath(__file__)
 project_path = os.path.dirname(script_path)+'/libs'
 sys.path.append(project_path)
-from functions_dwh.functions_dsm import get_oracle_connection, create_connection_psycopg2, compute_row_hash, save_meta, check_meta_start_dt_loading
+from functions_dwh.functions_dsm import get_oracle_connection, get_clickhouse_client, create_connection_psycopg2, compute_row_hash, save_meta, check_meta_start_dt_loading
 
 # Настройка логирования
 logger = LoggingMixin().log
@@ -75,8 +75,8 @@ def wf_dsm_mart_dsm_sale_data():
             ch_client = None
 
             with get_oracle_connection() as oracle_conn:
-                df_oracle = pd.read_sql(oracle_query, oracle_conn, params=params)
-
+                df_oracle = pd.read_sql(oracle_query, oracle_conn)
+                logger.info(f"Запрос к источнику выполнен, получено данных: {df_oracle.size}")
                 # 1. Проверка наличия данных в БД Oracle
                 if df_oracle.empty:
                     #logger.info(message)
@@ -88,7 +88,7 @@ def wf_dsm_mart_dsm_sale_data():
 
                     ch_client = get_clickhouse_client()
                     df_click = pd.DataFrame(ch_client.execute(f"""select {', '.join(pk_list)} from {tgt_table_name}"""), columns=pk_list) 
-                    
+                    logger.info(f"Запрос к таргет таблице выполнен, получено данных: {df_click.size}")
                     # 3.Выбор строк в Oracle, кот. отсутствуют в ClickHouse
                     # 3.1. Если первая прогрузка 
                     if df_click.empty:
@@ -113,7 +113,7 @@ def wf_dsm_mart_dsm_sale_data():
                                                         deleted_flag=0,
                                                         hash_diff=lambda df: df.apply(compute_row_hash, columns=hash_cols, axis=1)  # Хеш для выбранных столбцов
                                                     ).rename(columns={'stat_date': 'effective_dttm'}) # переименовали колонку из целевой таблицы stat_date -> effective_dttm  
-
+                        logger.info(f"Запрос подготовки технических полей выполнен, получено данных: {df_click.size}")
                         # 5.1. Создание временной таблицы по новым данным из Oracle
                         create_tbl_query = f""" 
                         CREATE TABLE IF NOT EXISTS {tmp_table_name} (
@@ -148,7 +148,7 @@ def wf_dsm_mart_dsm_sale_data():
                             ENGINE = MergeTree()
                             order by (cd_u)
                         """
-                                    
+                        logger.info(f"Сформирован запрос:\n {create_tbl_query}")            
                         ch_client.execute(create_tbl_query)
 
                         # 5.2. Вставка дельты
