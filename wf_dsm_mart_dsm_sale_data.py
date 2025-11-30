@@ -66,7 +66,7 @@ def wf_dsm_mart_dsm_sale_data():
             logger.error("Параметр loading_month не передан")
             raise ValueError("Параметр loading_month обязателен")
         
-        tmp_table_name = f"tmp.tmp_{tgt_table_name}_{uuid.uuid4().hex}" # Название для временной таблицы
+        tmp_table_name = f"tmp.tmp_{tgt_table_name[:4]}_{uuid.uuid4().hex}" # Название для временной таблицы
         logger.info(f"___________Дата прогрузки: {loading_month}__________")
         oracle_query = f"""SELECT * from {src_table_name} where stat_date = to_date('{loading_month}', 'YYYY-mm-dd') and rownum < 10""" 
         
