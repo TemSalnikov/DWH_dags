@@ -14,6 +14,12 @@ from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 import psycopg2
 import libs.functions_dwh.functions_dsm
 from airflow.api.common.trigger_dag import trigger_dag
+from airflow.sensors.external_task import ExternalTaskSensor
+from airflow.utils.state import State
+import time
+#from airflow.models.dagrun import DagRun
+from airflow.models import DagRun
+from airflow.utils.session import create_session
 
 # Настройка логирования
 logger = LoggingMixin().log
@@ -48,7 +54,27 @@ def check_and_split_date_range(start_date, end_date):
     except Exception as e:
         print(f"Ошибка при вводе периода прогрузки: {str(e)}")
         raise
-        
+
+# @provide_session
+def wait_for_dag_completion(dag_id, run_id, check_interval=30, session=None):
+    """Функция ожидания завершения DAG (упрощенная версия)"""
+    while True:
+        # Получаем статус DAG run
+        with create_session() as session:
+            dag_run = session.query(DagRun).filter(DagRun.run_id == run_id).first()
+            logger.info(f"dag_run: {session.query(DagRun).filter(DagRun.run_id == run_id)}")
+            logger.info(f"dag_run.first(): {session.query(DagRun).filter(DagRun.run_id == run_id).first()}")
+            dag_run_state = dag_run.state
+            
+        if dag_run_state in [State.SUCCESS, State.FAILED]:
+            logger.info(f"DAG run {run_id} завершен со статусом: {dag_run_state}")
+            if dag_run_state == State.FAILED:
+                raise Exception(f"DAG {dag_id} завершился с ошибкой")
+            break
+            
+        logger.info(f"Ожидание завершения DAG {run_id}... Текущий статус: {dag_run_state}")
+        time.sleep(check_interval)
+
 @dag(
     dag_id='cf_dsm_mart_dsm_sale_data',
     schedule_interval='0 9 6 * *', # в 9 утра каждого месяца 6 числа
@@ -117,35 +143,29 @@ def cf_dsm_mart_dsm_sale_data():
 
     @task
     def trigger_dags(periods, **kwargs):
-        # Создаем триггеры последовательно
         for period in periods:
-            logger.info(period)
-            logger.info(period.format('YYYY-MM-DD'))
-            short_id = uuid.uuid4().hex[:8]
-
-            #logger.info(short_id[0])
-            #logger.info(f"RUN_ID: triggered_by_{short_id[0]}_{kwargs['dag_run'].run_id}")
-            # trigger = trigger_dag(
-            #     dag_id='wf_dsm_mart_dsm_sale_data',
-            #     run_id=f"triggered_by_{short_id[0]}_{kwargs['dag_run'].run_id}",
-            #     conf={'loading_month': period.format('YYYY-MM-DD')},
-            #     execution_date=None,
-            #     replace_microseconds=False#,
-                #wait_for_completion=True # ждать завершения DAG перед следующим
-            # )
-            
-            trigger = TriggerDagRunOperator(
-                task_id=f"trigger_{period.format('YYYY-MM-DD')}_{short_id[0]}",
-                trigger_dag_id='wf_dsm_mart_dsm_sale_data',
+            short_id = uuid.uuid4().hex[:8], 
+            logger.info(short_id[0])
+            logger.info(f"RUN_ID: triggered_by_{short_id[0]}_{kwargs['dag_run'].run_id}")
+            run_id=f"triggered_by_{short_id[0]}_{kwargs['dag_run'].run_id}"
+            trigger = trigger_dag(
+                dag_id='wf_dsm_mart_dsm_sale_data',
+                run_id=run_id,
                 conf={'loading_month': period.format('YYYY-MM-DD')},
-                wait_for_completion=True, # ждать завершения DAG перед следующим
-                dag=dag
+                execution_date=None,
+                replace_microseconds=False
             )
-
             if not trigger:
                 raise RuntimeError("Не удалось запустить дочерний DAG")
             else:
                 logger.info(f"Запущен триггер на вызов потока: wf_dsm_mart_dsm_sale_data за период {period.format('YYYY-MM-DD')}")
+            
+            # запуск ожидания прогрузки потока
+            wait_for_dag_completion('wf_dsm_mart_dsm_sale_data', run_id)
+        
+            logger.info(f"Завершен DAG для периода {period.format('YYYY-MM-DD')}")
+    
+        return True
 
     task1 = create_date_parametrs()
     if task1:
