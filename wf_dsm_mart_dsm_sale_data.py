@@ -68,7 +68,7 @@ def wf_dsm_mart_dsm_sale_data():
         
         tmp_table_name = f"tmp.tmp_{tgt_table_name}_{uuid.uuid4().hex}" # Название для временной таблицы
         logger.info(f"___________Дата прогрузки: {loading_month}__________")
-        oracle_query = f"""SELECT * from {src_table_name} where to_char(stat_date, 'yyyy-mm-dd') = :loading_month where rownum < 10""" 
+        oracle_query = f"""SELECT * from {src_table_name} where stat_date = to_date({loading_month}, 'YYYY-mm-dd') and rownum < 10""" 
         
         try:
             params = {'loading_month': loading_month}
