@@ -61,6 +61,8 @@ def wait_for_dag_completion(dag_id, run_id, check_interval=30, session=None):
     while True:
         # Получаем статус DAG run
         dag_run = session.query(DagRun).filter(DagRun.run_id == run_id).first()
+        logger.info(f"dag_run: {session.query(DagRun).filter(DagRun.run_id == run_id)}")
+        logger.info(f"dag_run.first(): {session.query(DagRun).filter(DagRun.run_id == run_id).first()}")
         dag_run_state = dag_run.state
             
         if dag_run_state in [State.SUCCESS, State.FAILED]:
