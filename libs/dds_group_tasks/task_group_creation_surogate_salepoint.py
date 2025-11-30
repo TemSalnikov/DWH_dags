@@ -144,7 +144,7 @@ def hub_load_processing_tasks(hub_name: str, source_table: str, src_pk:str,  hub
                 t.src,
                 t.effective_dttm
             FROM {tmp_table} t
-            LEFT JOIN {hub_table} h 
+            LEFT JOIN dds.v_sn_{hub_table[4:]} h 
                 ON t.{src_pk} = h.{hub_id} AND t.src = h.src AND h.effective_from_dttm <= t.effective_dttm
                 AND h.effective_to_dttm >= t.effective_dttm
             WHERE h.{hub_pk} = ''
