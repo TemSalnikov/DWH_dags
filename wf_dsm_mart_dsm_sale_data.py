@@ -1,11 +1,9 @@
-from datetime import datetime, timedelta
+
 from airflow.utils.log.logging_mixin import LoggingMixin
 from airflow.decorators import dag, task
 from airflow.utils.dates import days_ago
-from clickhouse_driver import Client
 import pandas as pd
-import oracledb
-import hashlib
+
 from airflow.models import Param
 import pendulum
 import uuid
@@ -16,7 +14,7 @@ import sys
 script_path = os.path.abspath(__file__)
 project_path = os.path.dirname(script_path)+'/libs'
 sys.path.append(project_path)
-from functions_dwh.functions_dsm import get_oracle_connection, get_clickhouse_client, create_connection_psycopg2, compute_row_hash, save_meta, check_meta_start_dt_loading
+from functions_dwh.functions_dsm import get_oracle_connection, get_clickhouse_client, compute_row_hash
 
 # Настройка логирования
 logger = LoggingMixin().log
@@ -68,7 +66,7 @@ def wf_dsm_mart_dsm_sale_data():
         
         tmp_table_name = f"tmp.tmp_{tgt_table_name[4:]}_{uuid.uuid4().hex}" # Название для временной таблицы 
         logger.info(f"___________Дата прогрузки: {loading_month}__________")
-        oracle_query = f"""SELECT * from {src_table_name} where stat_date = to_date('{loading_month}', 'YYYY-mm-dd') and rownum < 10""" 
+        oracle_query = f"""SELECT * from {src_table_name} where stat_date = to_date('{loading_month}', 'YYYY-mm-dd')""" 
         
         try:
             params = {'loading_month': loading_month}
@@ -86,19 +84,19 @@ def wf_dsm_mart_dsm_sale_data():
                     # 2.1. Преобразование наименований столбцов, т.к. в Oracle указаны в верхнем регистре, в ClickHouse - в нижнем
                     df_oracle.columns = [col.lower() for col in df_oracle.columns]
 
-                    ch_client = get_clickhouse_client()
-                    df_click = pd.DataFrame(ch_client.execute(f"""select {', '.join(pk_list)} from {tgt_table_name}"""), columns=pk_list) 
-                    logger.info(f"Запрос к таргет таблице выполнен, получено данных: {df_click.size}")
-                    # 3.Выбор строк в Oracle, кот. отсутствуют в ClickHouse
-                    # 3.1. Если первая прогрузка 
-                    if df_click.empty:
-                        diff_rows = df_oracle.copy()
-                    else:
-                    # 3.2. Если прогрузка не первая
-                        diff_rows = df_oracle.merge(df_click[pk_list], on=pk_list, how='left', indicator=True).query('_merge == "left_only"').drop('_merge', axis=1)
+                    # ch_client = get_clickhouse_client()
+                    # df_click = pd.DataFrame(ch_client.execute(f"""select {', '.join(pk_list)} from {tgt_table_name}"""), columns=pk_list) 
+                    # logger.info(f"Запрос к таргет таблице выполнен, получено данных: {df_click.size}")
+                    # # 3.Выбор строк в Oracle, кот. отсутствуют в ClickHouse
+                    # # 3.1. Если первая прогрузка 
+                    # if df_click.empty:
+                    #     diff_rows = df_oracle.copy()
+                    # else:
+                    # # 3.2. Если прогрузка не первая
+                    #     diff_rows = df_oracle.merge(df_click[pk_list], on=pk_list, how='left', indicator=True).query('_merge == "left_only"').drop('_merge', axis=1)
 
-                    # 4. Данных нет
-                    if diff_rows.empty:
+                    # # 4. Данных нет
+                    if df_oracle.empty:
                         #logger.info(message)
                         #return False
                         raise AirflowSkipException(message)
@@ -108,7 +106,7 @@ def wf_dsm_mart_dsm_sale_data():
                         # 5.1. Создание хешей для всех столбцов таблицы-источника, кроме ключей
                         hash_cols = [row for row in df_oracle.columns.tolist() if row not in pk_list]
 
-                        df_for_insert = diff_rows.assign(
+                        df_for_insert = df_oracle.assign(
                                                         processed_dttm=pd.Timestamp.now().normalize(), 
                                                         deleted_flag=0,
                                                         hash_diff=lambda df: df.apply(compute_row_hash, columns=hash_cols, axis=1)  # Хеш для выбранных столбцов
@@ -153,7 +151,7 @@ def wf_dsm_mart_dsm_sale_data():
 
                         # 5.2. Вставка дельты
                         ch_client.insert_dataframe(f"INSERT INTO {tmp_table_name} VALUES", df_for_insert, settings=dict(use_numpy=True))
-                        logger.info(f"Найдено {diff_rows.shape[0]} новых записей в {src_table_name}. Создана временная таблица: {tmp_table_name}")
+                        logger.info(f"Создана временная таблица: {tmp_table_name}")
                         return {'tmp_table_name': tmp_table_name, 'loading_month': loading_month}
         except AirflowSkipException:
         # Пробрасываем исключение пропуска дальше
