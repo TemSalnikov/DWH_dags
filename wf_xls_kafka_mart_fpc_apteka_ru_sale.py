@@ -5,7 +5,7 @@ from file_processing import write_meta_file
 import os
 import sys
 script_path = os.path.abspath(__file__)
-project_path = os.path.dirname(script_path)+'libs'
+project_path = os.path.dirname(script_path)+'/libs'
 sys.path.append(project_path)
 
 from kafka_producer_common_for_xls import call_producer
