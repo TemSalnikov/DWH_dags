@@ -67,57 +67,40 @@ def cf_xls_kafka_mart_fpc_vash_doctor_remain():
 
 
     @task
-    def get_folders(parametrs:Dict)-> Optional[list]:
-        return file_processing.get_list_folders(parametrs['directory'])
-
-    @task
-    def get_files(parametrs:Dict, folders:list)-> Optional[dict]:
+    def get_files(parametrs:Dict)-> Optional[list]:
         loger = file_processing.LoggingMixin().log
-        files = {}
-        for folder in folders:
-            loger.info(f'Получения списка файлов из папки {folder}')
-            files[folder] = file_processing.get_list_files(parametrs['directory'], folder)
+        loger.info(f"Получение списка файлов из директории {parametrs['directory']}")
+        # Передаем пустую строку в качестве "папки", чтобы искать файлы в корне директории
+        files = file_processing.get_list_files(parametrs['directory'], '')
         loger.info(f'Получен перечень файлов: {files}')
         return files
 
     @task
-    def get_meta_folders(parametrs:Dict)-> Optional[list]:
+    def get_meta_files(parametrs:Dict)-> Optional[list]:
         loger = file_processing.LoggingMixin().log
-        query = f"""select name_folder from files.folders c
-                join files.directories d on c.id_dir = d.id_dir and d.name_dir = '{parametrs['directory']}'"""
+        # Запрос для получения файлов, у которых нет родительской папки (id_folder is NULL)
+        # в пределах указанной директории.
+        query = f"""select name_file from files.files f
+                    join files.directories d on f.id_dir = d.id_dir 
+                    and d.name_dir = '{parametrs['directory']}'
+                    where f.id_folder is null"""
         loger.info(f'Сформирован запрос: {query}')
-        folders = file_processing.get_meta_data(
-            # parametrs['db_config'], 
+        files = file_processing.get_meta_data(
             query)
-        loger.info(f'Получен перечень папок: {folders}')
-        return folders
-
-    @task
-    def get_meta_files(parametrs:Dict, folders:list)-> Optional[dict]:  # здесь в folders нужно передовать список папок из get_folders, а не get_meta_folders
-        loger = file_processing.LoggingMixin().log
-        files = {}
-        for folder in folders:
-            loger.info(f'Получения списка файлов из папки {folder}')
-            query = f"""select name_file  from files.files f
-                        join files.folders c on f.id_folder = c.id_folder and c.name_folder = '{folder}'
-                        join files.directories d on c.id_dir = d.id_dir and d.name_dir = '{parametrs['directory']}' """
-            loger.info(f'Сформирован запрос: {query}')
-            files[folder] = file_processing.get_meta_data(
-                # parametrs['db_config'], 
-                query)
-            loger.info(f'Получен перечень файлов: {files}')
+        loger.info(f'Получен перечень обработанных файлов: {files}')
         return files
 
-
     @task
-    def get_files_for_processing(processinf_folders: list, meta_files_dict:dict, files_dict:dict)-> Optional[dict]:
-        files = {}
-        for folder in processinf_folders:
-            files_list= file_processing.check_new_files(files_dict[folder], meta_files_dict[folder])
-            if files_list:
-                files[folder] = files_list
-
-        return files
+    def get_files_for_processing(meta_files_list:list, files_list:list)-> Optional[dict]:
+        new_files = file_processing.check_new_files(files_list, meta_files_list)
+        
+        # Оборачиваем результат в словарь, где ключ - пустая строка, 
+        # чтобы соответствовать формату, который ожидает дочерний DAG.
+        # Это позволит повторно использовать wf-dag без изменений.
+        if new_files:
+            return {'': new_files}
+        
+        return {}
 
     @task
     def trigger_or_skip(parametrs: Optional[Dict], processing_files: Optional[Dict], **context):
@@ -144,12 +127,9 @@ def cf_xls_kafka_mart_fpc_vash_doctor_remain():
 
     start_flow = check_data_availability()
     parametrs = prepare_parameters(start_flow)
-    folders = get_folders(parametrs)
-    meta_folders = get_meta_folders(parametrs)
-    files = get_files(parametrs, folders)
-    meta_files = get_meta_files(parametrs, folders)
-    processinf_folders = get_folders_for_processing(meta_folders, folders)
-    processing_files = get_files_for_processing(processinf_folders, meta_files, files)
+    files = get_files(parametrs)
+    meta_files = get_meta_files(parametrs)
+    processing_files = get_files_for_processing(meta_files, files)
     trigger_or_skip(parametrs, processing_files)
 
 cf_xls_kafka_mart_fpc_vash_doctor_remain()
