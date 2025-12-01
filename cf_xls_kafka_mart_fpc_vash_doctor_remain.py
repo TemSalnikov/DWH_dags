@@ -108,9 +108,6 @@ def cf_xls_kafka_mart_fpc_vash_doctor_remain():
             loger.info(f'Получен перечень файлов: {files}')
         return files
 
-    @task
-    def get_folders_for_processing(meta_folder_list:list, folders_list:list)-> Optional[list]:
-        return file_processing.check_new_folders(meta_folder_list, folders_list)
 
     @task
     def get_files_for_processing(processinf_folders: list, meta_files_dict:dict, files_dict:dict)-> Optional[dict]:
