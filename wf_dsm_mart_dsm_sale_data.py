@@ -67,6 +67,7 @@ def wf_dsm_mart_dsm_sale_data():
         tmp_table_name = f"tmp.tmp_{tgt_table_name[4:]}_{uuid.uuid4().hex}" # Название для временной таблицы 
         logger.info(f"___________Дата прогрузки: {loading_month}__________")
         # 5.1. Создание временной таблицы по новым данным из Oracle
+        
         create_tbl_query = f""" 
         CREATE TABLE IF NOT EXISTS {tmp_table_name} (
             cd_reg Int32,
@@ -100,7 +101,8 @@ def wf_dsm_mart_dsm_sale_data():
             ENGINE = MergeTree()
             order by (cd_u)
         """
-        logger.info(f"Сформирован запрос:\n {create_tbl_query}")            
+        logger.info(f"Сформирован запрос:\n {create_tbl_query}")
+        ch_client = get_clickhouse_client()        
         ch_client.execute(create_tbl_query)
         logger.info(f"Создана временная таблица: {tmp_table_name}")
         
@@ -114,7 +116,7 @@ def wf_dsm_mart_dsm_sale_data():
             for cd_reg in all_cd_regs_for_month:
                 oracle_query = f"""SELECT * from {src_table_name} where stat_date = to_date('{loading_month}', 'YYYY-mm-dd') and cd_reg = {cd_reg}"""
                 params = {'loading_month': loading_month}
-                ch_client = None
+                #ch_client = None
 
                 with get_oracle_connection() as oracle_conn:
                     df_oracle = pd.read_sql(oracle_query, oracle_conn)
