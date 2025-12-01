@@ -126,7 +126,7 @@ def extract_all_xls(path='', name_report='Продажи', name_pharm_chain='В�
         # Чистим числа
         df_report['sale_quantity'] = pd.to_numeric(df_report['sale_quantity'], errors='coerce').fillna(0)
         df_report = df_report[df_report['sale_quantity'] > 0].copy()
-        df_report['sale_quantity'] = df_report['sale_quantity'].astype(int).astype(str)
+        df_report['sale_quantity'] = df_report['sale_quantity'].astype(str)
         
         # Технические поля
         count_rows = len(df_report)
@@ -172,14 +172,14 @@ def extract_all_xls(path='', name_report='Продажи', name_pharm_chain='В�
 
 
 if __name__ == "__main__": 
-    test_path = r'C:\Users\nmankov\Desktop\отчеты\Ваш доктор\Закупки\2024\01_2024.xlsx'
+    test_path = r'C:\Users\nmankov\Desktop\отчеты\Ваш доктор\Закупки\2025\02_2025.xlsx'
     
     if not os.path.exists(test_path):
         test_path = os.path.join(os.getcwd(), test_path)
 
     if os.path.exists(test_path):
         print(f"Запуск парсинга файла: {test_path}")
-        result = extract_all_xls(path=test_path, name_report='Закупки', name_pharm_chain='Ваш доктор')
+        result = extract_all_xls(path=test_path, name_report='Продажи', name_pharm_chain='Ваш доктор')
         df_result = result['table_report']
 
         print("Первые 5 строк результата:")
