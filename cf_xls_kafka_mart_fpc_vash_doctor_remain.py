@@ -78,15 +78,10 @@ def cf_xls_kafka_mart_fpc_vash_doctor_remain():
     @task
     def get_meta_files(parametrs:Dict)-> Optional[list]:
         loger = file_processing.LoggingMixin().log
-        # Запрос для получения файлов, у которых нет родительской папки (id_folder is NULL)
-        # в пределах указанной директории.
-        query = f"""select name_file from files.files f
-                    join files.directories d on f.id_dir = d.id_dir 
-                    and d.name_dir = '{parametrs['directory']}'
-                    where f.id_folder is null"""
-        loger.info(f'Сформирован запрос: {query}')
-        files = file_processing.get_meta_data(
-            query)
+        # Временное решение: всегда возвращаем пустой список,
+        # так как текущая структура метаданных не позволяет отслеживать файлы без папок.
+        # Это приведет к повторной обработке всех файлов в директории при каждом запуске.
+        files = []
         loger.info(f'Получен перечень обработанных файлов: {files}')
         return files
 
