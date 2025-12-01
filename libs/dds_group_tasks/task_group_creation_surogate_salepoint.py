@@ -350,7 +350,7 @@ def hub_load_processing_tasks(hub_name: str, source_table: str, src_pk:str,  hub
                 logger.debug("Подключение к ClickHouse закрыто")
 
     @task
-    def get_union_tlb(tmp_table_dlt: str, tbl_new_uid: str, tbl_dlt_uid: str) -> str:
+    def get_union_tlb(tmp_table_dlt: str, tbl_new_uid: str) -> str:
         """Сравнение данных с хаб-таблицей"""
         client = None
         union_table = f"tmp.tmp_union_{uuid.uuid4().hex}"
@@ -384,14 +384,6 @@ def hub_load_processing_tasks(hub_name: str, source_table: str, src_pk:str,  hub
                 effective_dttm,
                 deleted_flg
             FROM {tbl_new_uid} t2
-            UNION DISTINCT
-            SELECT  
-                {hub_pk},
-                {hub_id},
-                src,
-                effective_dttm,
-                deleted_flg
-            FROM {tbl_dlt_uid} t3
             """
             logger.info(f"Создан запрос: {query_not_in_hub}")
 
