@@ -79,9 +79,9 @@ def extract_all_xls(path='', name_report='Продажи', name_pharm_chain='В�
             df.rename(columns={total_col_name: 'sale_quantity'}, inplace=True)
             
             # Заполняем пустотой поля филиалов
-            df['branch_name'] = 'Null'
-            df['city'] = 'Null'
-            df['street'] = 'Null'
+            df['branch_name'] = None
+            df['city'] = None
+            df['street'] = None
             
             df_report = df
 
@@ -126,6 +126,7 @@ def extract_all_xls(path='', name_report='Продажи', name_pharm_chain='В�
         # Чистим числа
         df_report['sale_quantity'] = pd.to_numeric(df_report['sale_quantity'], errors='coerce').fillna(0)
         df_report = df_report[df_report['sale_quantity'] > 0].copy()
+        df_report['sale_quantity'] = df_report['sale_quantity'].astype(int).astype(str)
         
         # Технические поля
         count_rows = len(df_report)
@@ -171,7 +172,7 @@ def extract_all_xls(path='', name_report='Продажи', name_pharm_chain='В�
 
 
 if __name__ == "__main__": 
-    test_path = r'C:\Users\nmankov\Desktop\отчеты\Ваш доктор\Закупки\2025\02_2025.xlsx'
+    test_path = r'C:\Users\nmankov\Desktop\отчеты\Ваш доктор\Закупки\2024\01_2024.xlsx'
     
     if not os.path.exists(test_path):
         test_path = os.path.join(os.getcwd(), test_path)
@@ -179,7 +180,18 @@ if __name__ == "__main__":
     if os.path.exists(test_path):
         print(f"Запуск парсинга файла: {test_path}")
         result = extract_all_xls(path=test_path, name_report='Закупки', name_pharm_chain='Ваш доктор')
+        df_result = result['table_report']
+
         print("Первые 5 строк результата:")
-        print(result['table_report'].head().to_string())
+        print(df_result.head().to_string())
+
+        # Сохранение результата в CSV в той же папке
+        output_dir = os.path.dirname(test_path)
+        base_filename = os.path.splitext(os.path.basename(test_path))[0]
+        output_filename = f"parsed_{base_filename}.csv"
+        output_path = os.path.join(output_dir, output_filename)
+        
+        df_result.to_csv(output_path, index=False, encoding='utf-8-sig')
+        print(f"\nРезультат сохранен в файл: {output_path}")
     else:
         print(f"Файл не найден: {test_path}")
