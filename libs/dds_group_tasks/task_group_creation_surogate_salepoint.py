@@ -205,7 +205,7 @@ def hub_load_processing_tasks(hub_name: str, source_table: str, src_pk:str,  hub
                 deleted_flg = False
             FROM {tmp_table} t
             LEFT JOIN {hub_table} h 
-                ON splitByChar('^^',t.{src_pk})[0] = splitByChar('^^',h.{hub_id})[0] AND splitByChar('^^',h.{hub_id})[1] = 'DEFAULT_SALEPOINT'  AND t.src = h.src AND h.effective_from_dttm <= t.effective_dttm
+                ON splitByString('^^',t.{src_pk})[0] = splitByString('^^',h.{hub_id})[0] AND splitByString('^^',h.{hub_id})[1] = 'DEFAULT_SALEPOINT'  AND t.src = h.src AND h.effective_from_dttm <= t.effective_dttm
                 AND h.effective_to_dttm >= t.effective_dttm
             UNION DISTINCT
             SELECT  
@@ -216,7 +216,7 @@ def hub_load_processing_tasks(hub_name: str, source_table: str, src_pk:str,  hub
                 deleted_flg = True
             FROM {tmp_table} t
             LEFT JOIN {hub_table} h 
-                ON splitByChar('^^',t.{src_pk})[0] = splitByChar('^^',h.{hub_id})[0] AND splitByChar('^^',h.{hub_id})[1] = 'DEFAULT_SALEPOINT'  AND t.src = h.src AND h.effective_from_dttm <= t.effective_dttm
+                ON splitByString('^^',t.{src_pk})[0] = splitByString('^^',h.{hub_id})[0] AND splitByString('^^',h.{hub_id})[1] = 'DEFAULT_SALEPOINT'  AND t.src = h.src AND h.effective_from_dttm <= t.effective_dttm
                 AND h.effective_to_dttm >= t.effective_dttm
             """
             logger.info(f"Создан запрос: {query_not_in_hub}")
