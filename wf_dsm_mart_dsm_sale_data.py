@@ -66,93 +66,94 @@ def wf_dsm_mart_dsm_sale_data():
         
         tmp_table_name = f"tmp.tmp_{tgt_table_name[4:]}_{uuid.uuid4().hex}" # Название для временной таблицы 
         logger.info(f"___________Дата прогрузки: {loading_month}__________")
-        oracle_query = f"""SELECT * from {src_table_name} where stat_date = to_date('{loading_month}', 'YYYY-mm-dd')""" 
+        # 5.1. Создание временной таблицы по новым данным из Oracle
         
+        create_tbl_query = f""" 
+        CREATE TABLE IF NOT EXISTS {tmp_table_name} (
+            cd_reg Int32,
+            cd_u Int64,
+            stat_year Int32,
+            stat_month Int32,
+            sales_type_id Int32,
+            effective_dttm DateTime,
+            volsht_out Float64,
+            volrub_out Float64,
+            volsht_in Float64,
+            volrub_in Float64,
+            prcavg_w_in Float64,
+            prcavg_w_out Float64,
+            pred_pn Float64,
+            pred_pn_firm Float64,
+            pred_tn Float64,
+            pred_tn_firm Float64,
+            pred_br Float64,
+            pred_br_firm Float64,
+            wpred_pn Float64,
+            wpred_pn_firm Float64,
+            wpred_tn Float64,
+            wpred_tn_firm Float64,
+            wpred_br Float64,
+            wpred_br_firm Float64,
+            processed_dttm DateTime,
+            deleted_flag Boolean,
+            hash_diff Text	
+        )
+            ENGINE = MergeTree()
+            order by (cd_u)
+        """
+        logger.info(f"Сформирован запрос:\n {create_tbl_query}")
+        ch_client = get_clickhouse_client()        
+        ch_client.execute(create_tbl_query)
+        logger.info(f"Создана временная таблица: {tmp_table_name}")
+        
+        # получение cd_reg
+        with get_oracle_connection() as oracle_conn:
+            get_cd_reg = f"""SELECT distinct cd_reg from {src_table_name} where stat_date = to_date('{loading_month}', 'YYYY-mm-dd')""" 
+            
+            all_cd_regs_for_month = pd.read_sql(get_cd_reg, oracle_conn)
+            logger.info(f"Результат зарпоса получения регионов: {all_cd_regs_for_month}")
+            all_cd_regs_for_month = all_cd_regs_for_month['CD_REG'].tolist()
+            logger.info(f"Получен перечень cd_reg: {all_cd_regs_for_month}")
+
         try:
-            params = {'loading_month': loading_month}
-            ch_client = None
+            for cd_reg in all_cd_regs_for_month:
+                oracle_query = f"""SELECT * from {src_table_name} where stat_date = to_date('{loading_month}', 'YYYY-mm-dd') and cd_reg = {cd_reg}"""
+                params = {'loading_month': loading_month}
+                #ch_client = None
 
-            with get_oracle_connection() as oracle_conn:
-                df_oracle = pd.read_sql(oracle_query, oracle_conn)
-                logger.info(f"Запрос к источнику выполнен, получено данных: {df_oracle.size}")
-                # 1. Проверка наличия данных в БД Oracle
-                if df_oracle.empty:
-                    #logger.info(message)
-                    raise AirflowSkipException(message)
-                else:
-                    # 2. Дельта новых данных в БД Oracle
-                    # 2.1. Преобразование наименований столбцов, т.к. в Oracle указаны в верхнем регистре, в ClickHouse - в нижнем
-                    df_oracle.columns = [col.lower() for col in df_oracle.columns]
-
-                    # ch_client = get_clickhouse_client()
-                    # df_click = pd.DataFrame(ch_client.execute(f"""select {', '.join(pk_list)} from {tgt_table_name}"""), columns=pk_list) 
-                    # logger.info(f"Запрос к таргет таблице выполнен, получено данных: {df_click.size}")
-                    # # 3.Выбор строк в Oracle, кот. отсутствуют в ClickHouse
-                    # # 3.1. Если первая прогрузка 
-                    # if df_click.empty:
-                    #     diff_rows = df_oracle.copy()
-                    # else:
-                    # # 3.2. Если прогрузка не первая
-                    #     diff_rows = df_oracle.merge(df_click[pk_list], on=pk_list, how='left', indicator=True).query('_merge == "left_only"').drop('_merge', axis=1)
-
-                    # # 4. Данных нет
+                with get_oracle_connection() as oracle_conn:
+                    df_oracle = pd.read_sql(oracle_query, oracle_conn)
+                    logger.info(f"Выполнен запрос: {oracle_query}")
+                    logger.info(f"Запрос к источнику выполнен, получено данных: {df_oracle.size}")
+                    # 1. Проверка наличия данных в БД Oracle
                     if df_oracle.empty:
-                        #logger.info(message)
-                        #return False
                         raise AirflowSkipException(message)
-
                     else:
-                        # 5. Данные есть, создание временной таблицы -- поправить после результата left join 
-                        # 5.1. Создание хешей для всех столбцов таблицы-источника, кроме ключей
-                        hash_cols = [row for row in df_oracle.columns.tolist() if row not in pk_list]
+                        # 2. Дельта новых данных в БД Oracle
+                        # 2.1. Преобразование наименований столбцов, т.к. в Oracle указаны в верхнем регистре, в ClickHouse - в нижнем
+                        df_oracle.columns = [col.lower() for col in df_oracle.columns]
 
-                        df_for_insert = df_oracle.assign(
-                                                        processed_dttm=pd.Timestamp.now().normalize(), 
-                                                        deleted_flag=0,
-                                                        hash_diff=lambda df: df.apply(compute_row_hash, columns=hash_cols, axis=1)  # Хеш для выбранных столбцов
-                                                    ).rename(columns={'stat_date': 'effective_dttm'}) # переименовали колонку из целевой таблицы stat_date -> effective_dttm  
-                        logger.info(f"Запрос подготовки технических полей выполнен, получено данных: {df_for_insert.size}")
-                        # 5.1. Создание временной таблицы по новым данным из Oracle
-                        create_tbl_query = f""" 
-                        CREATE TABLE IF NOT EXISTS {tmp_table_name} (
-                            cd_reg Int32,
-                            cd_u Int64,
-                            stat_year Int32,
-                            stat_month Int32,
-                            sales_type_id Int32,
-                            effective_dttm DateTime,
-                            volsht_out Float64,
-                            volrub_out Float64,
-                            volsht_in Float64,
-                            volrub_in Float64,
-                            prcavg_w_in Float64,
-                            prcavg_w_out Float64,
-                            pred_pn Float64,
-                            pred_pn_firm Float64,
-                            pred_tn Float64,
-                            pred_tn_firm Float64,
-                            pred_br Float64,
-                            pred_br_firm Float64,
-                            wpred_pn Float64,
-                            wpred_pn_firm Float64,
-                            wpred_tn Float64,
-                            wpred_tn_firm Float64,
-                            wpred_br Float64,
-                            wpred_br_firm Float64,
-                            processed_dttm DateTime,
-                            deleted_flag Boolean,
-                            hash_diff Text	
-                        )
-                            ENGINE = MergeTree()
-                            order by (cd_u)
-                        """
-                        logger.info(f"Сформирован запрос:\n {create_tbl_query}")            
-                        ch_client.execute(create_tbl_query)
+                        # # 4. Данных нет
+                        if df_oracle.empty:
+                            raise AirflowSkipException(message)
 
-                        # 5.2. Вставка дельты
-                        ch_client.insert_dataframe(f"INSERT INTO {tmp_table_name} VALUES", df_for_insert, settings=dict(use_numpy=True))
-                        logger.info(f"Создана временная таблица: {tmp_table_name}")
-                        return {'tmp_table_name': tmp_table_name, 'loading_month': loading_month}
+                        else:
+                            # 5.1. Создание хешей для всех столбцов таблицы-источника, кроме ключей
+                            hash_cols = [row for row in df_oracle.columns.tolist() if row not in pk_list]
+
+                            df_for_insert = df_oracle.assign(
+                                                            processed_dttm=pd.Timestamp.now().normalize(), 
+                                                            deleted_flag=0,
+                                                            hash_diff=lambda df: df.apply(compute_row_hash, columns=hash_cols, axis=1)  # Хеш для выбранных столбцов
+                                                        ).rename(columns={'stat_date': 'effective_dttm'}) # переименовали колонку из целевой таблицы stat_date -> effective_dttm  
+                            logger.info(f"Запрос подготовки технических полей выполнен, получено данных: {df_for_insert.size}")
+                            
+                            # 5.2. Вставка дельты
+                            ch_client.insert_dataframe(f"INSERT INTO {tmp_table_name} VALUES", df_for_insert, settings=dict(use_numpy=True))
+                            logger.info(f"Прогружены данные в временную таблицу за период {loading_month} по региону {cd_reg}")
+                            
+                            
+            return {'tmp_table_name': tmp_table_name, 'loading_month': loading_month}
         except AirflowSkipException:
         # Пробрасываем исключение пропуска дальше
             raise
