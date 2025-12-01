@@ -70,7 +70,7 @@ def extract_all_xls(path='', name_report='Продажи', name_pharm_chain='В�
                 total_col_name = c
                 break
         
-        # Если колонок <= 3 (Product, Total и мб индекс) -> 2024
+        # Если колонок  = 3 (Product, Total и мб индекс) -> 2024
         if len(df.columns) <= 3 and total_col_name:
             loger.info("--- ФОРМАТ 2024 (Упрощенный: Товар - Общий итог) ---")
             
@@ -125,7 +125,9 @@ def extract_all_xls(path='', name_report='Продажи', name_pharm_chain='В�
         
         # Чистим числа
         df_report['sale_quantity'] = pd.to_numeric(df_report['sale_quantity'], errors='coerce').fillna(0)
-        df_report = df_report[df_report['sale_quantity'] > 0].copy()
+        
+        # Логируем и удаляем строки с нулевыми продажами (пустые или нечисловые значения)
+        df_report = df_report[df_report['sale_quantity'] != 0].copy()
         df_report['sale_quantity'] = df_report['sale_quantity'].astype(str)
         
         # Технические поля
