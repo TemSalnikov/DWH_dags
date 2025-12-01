@@ -109,7 +109,10 @@ def wf_dsm_mart_dsm_sale_data():
         # получение cd_reg
         with get_oracle_connection() as oracle_conn:
             get_cd_reg = f"""SELECT distinct cd_reg from {src_table_name} where stat_date = to_date('{loading_month}', 'YYYY-mm-dd')""" 
-            all_cd_regs_for_month = pd.read_sql(get_cd_reg, oracle_conn)['cd_reg'].tolist()
+            
+            all_cd_regs_for_month = pd.read_sql(get_cd_reg, oracle_conn)
+            logger.info(f"Результат зарпоса получения регионов: {all_cd_regs_for_month}")
+            all_cd_regs_for_month = all_cd_regs_for_month['CD_REG'].tolist()
             logger.info(f"Получен перечень cd_reg: {all_cd_regs_for_month}")
 
         try:
