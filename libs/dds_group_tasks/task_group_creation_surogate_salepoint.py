@@ -203,7 +203,7 @@ def hub_load_processing_tasks(hub_name: str, source_table: str, src_pk:str,  hub
                 h.{hub_pk},
                 t.{src_pk} as {hub_id},
                 t.src,
-                h.effective_from_dttm as effective_dttm,
+                t.effective_dttm,
                 False as deleted_flg
             FROM {tmp_table} t
             INNER JOIN {hub_table} h 
@@ -215,7 +215,7 @@ def hub_load_processing_tasks(hub_name: str, source_table: str, src_pk:str,  hub
                 h.{hub_pk},
                 h.{hub_id},
                 h.src,
-                h.effective_dttm,
+                h.effective_from_dttm as effective_dttm,
                 True as deleted_flg
             FROM {tmp_table} t
             INNER JOIN {hub_table} h 
