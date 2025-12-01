@@ -196,8 +196,8 @@ def hub_load_processing_tasks(hub_name: str, source_table: str, src_pk:str,  hub
             query_not_in_hub = f"""
             CREATE TABLE {dlt_rws_table} 
             ENGINE = MergeTree()
-            PRIMARY KEY ({src_pk})
-            ORDER BY ({src_pk})
+            PRIMARY KEY ({hub_id})
+            ORDER BY ({hub_id})
             AS
             SELECT  
                 h.{hub_pk},
