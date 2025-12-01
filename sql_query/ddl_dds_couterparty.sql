@@ -14,7 +14,16 @@ deleted_flg bool
 ENGINE = MergeTree
 order by (counterparty_uuid)
 
-CREATE VIEW dds.v_sn_hub_counterparty AS
+CREATE VIEW dds.v_sn_hub_counterparty 
+(counterparty_uuid String,
+counterparty_id String,
+src String,
+effective_from_dttm DateTime,
+effective_to_dttm DateTime,
+processed_dttm DateTime,
+deleted_flg bool
+)
+AS
 SELECT t1.* EXCEPT (processed_dttm_max), processed_dttm_max AS processed_dttm
 FROM (
     SELECT
@@ -29,13 +38,21 @@ FROM (
         max(processed_dttm) AS processed_dttm_max
 
     FROM dds.hub_counterparty
-    WHERE processed_dttm BETWEEN {p_from_dttm:DateTime} AND {p_to_dttm:DateTime}
     GROUP BY counterparty_uuid
     HAVING deleted_flg = false
 ) t1;
 
 
-CREATE VIEW dds.v_sv_hub_counterparty AS
+CREATE VIEW dds.v_sv_hub_counterparty
+(counterparty_uuid String,
+counterparty_id String,
+src String,
+effective_from_dttm DateTime,
+effective_to_dttm DateTime,
+processed_dttm DateTime,
+deleted_flg bool
+)
+AS
 SELECT t1.* EXCEPT (processed_dttm_max), processed_dttm_max AS processed_dttm
 FROM (
     SELECT
@@ -56,7 +73,15 @@ FROM (
 ) t1;
 
 
-CREATE VIEW dds.v_iv_hub_counterparty AS
+CREATE VIEW dds.v_iv_hub_counterparty
+(counterparty_uuid String,
+counterparty_id String,
+src String,
+effective_from_dttm DateTime,
+effective_to_dttm DateTime,
+processed_dttm DateTime,
+deleted_flg bool
+) AS
 SELECT t1.* EXCEPT (processed_dttm_max), processed_dttm_max AS processed_dttm
 FROM (
     SELECT
@@ -76,7 +101,15 @@ FROM (
     HAVING deleted_flg = false
 ) t1;
 
-CREATE VIEW dds.v_sn_hub_counterparty_salepoint AS
+CREATE VIEW dds.v_sn_hub_counterparty_salepoint 
+(counterparty_salepoint_uuid String,
+counterparty_salepoint_id String,
+src String,
+effective_from_dttm DateTime,
+effective_to_dttm DateTime,
+processed_dttm DateTime,
+deleted_flg bool
+) AS
 SELECT t1.* EXCEPT (processed_dttm_max), processed_dttm_max AS processed_dttm
 FROM (
     SELECT
@@ -91,13 +124,20 @@ FROM (
         max(processed_dttm) AS processed_dttm_max
 
     FROM dds.hub_counterparty_salepoint
-    WHERE processed_dttm BETWEEN {p_from_dttm:DateTime} AND {p_to_dttm:DateTime}
     GROUP BY counterparty_salepoint_uuid
     HAVING deleted_flg = false
 ) t1;
 
 
-CREATE VIEW dds.v_sv_hub_counterparty_salepoint AS
+CREATE VIEW dds.v_sv_hub_counterparty_salepoint (counterparty_salepoint_uuid String,
+counterparty_salepoint_id String,
+src String,
+effective_from_dttm DateTime,
+effective_to_dttm DateTime,
+processed_dttm DateTime,
+deleted_flg bool
+)
+AS
 SELECT t1.* EXCEPT (processed_dttm_max), processed_dttm_max AS processed_dttm
 FROM (
     SELECT
@@ -118,7 +158,15 @@ FROM (
 ) t1;
 
 
-CREATE VIEW dds.v_iv_hub_counterparty_salepoint AS
+CREATE VIEW dds.v_iv_hub_counterparty_salepoint 
+(counterparty_salepoint_uuid String,
+counterparty_salepoint_id String,
+src String,
+effective_from_dttm DateTime,
+effective_to_dttm DateTime,
+processed_dttm DateTime,
+deleted_flg bool
+) AS
 SELECT t1.* EXCEPT (processed_dttm_max), processed_dttm_max AS processed_dttm
 FROM (
     SELECT
@@ -172,10 +220,31 @@ deleted_flg bool,
 src String,
 hash_diff String
 )
-ENGINE = ReplacingMergeTree
+ENGINE = MergeTree
 order by (counterparty_uuid, counterparty_salepoint_uuid, hash_diff)
 
-CREATE VIEW dds.v_sn_counterparty AS
+CREATE VIEW dds.v_sn_counterparty 
+(
+counterparty_uuid String,
+counterparty_salepoint_uuid String,
+--бизнесс данные
+inn_code String,
+counterparty_name String,
+the_subject_code String,
+the_subject_name String,
+settlement_name String,
+district_name String,
+address_name String,
+md_system_code String,
+
+-- обязательные поля
+effective_from_dttm DateTime,
+effective_to_dttm DateTime,
+processed_dttm DateTime,
+deleted_flg bool,
+src String,
+hash_diff String
+) AS
 SELECT t1.* EXCEPT (processed_dttm_max), processed_dttm_max AS processed_dttm
 FROM (
     SELECT
@@ -199,13 +268,33 @@ FROM (
         max(processed_dttm) AS processed_dttm_max
 
     FROM dds.counterparty
-    WHERE processed_dttm BETWEEN {p_from_dttm:DateTime} AND {p_to_dttm:DateTime}
     GROUP BY counterparty_uuid, counterparty_salepoint_uuid, hash_diff
     HAVING deleted_flg = false
 ) t1;
 
 
-CREATE VIEW dds.v_sv_counterparty AS
+CREATE VIEW dds.v_sv_counterparty 
+ (
+counterparty_uuid String,
+counterparty_salepoint_uuid String,
+--бизнесс данные
+inn_code String,
+counterparty_name String,
+the_subject_code String,
+the_subject_name String,
+settlement_name String,
+district_name String,
+address_name String,
+md_system_code String,
+
+-- обязательные поля
+effective_from_dttm DateTime,
+effective_to_dttm DateTime,
+processed_dttm DateTime,
+deleted_flg bool,
+src String,
+hash_diff String
+) AS
 SELECT t1.* EXCEPT (processed_dttm_max), processed_dttm_max AS processed_dttm
 FROM (
     SELECT
@@ -235,7 +324,28 @@ FROM (
 ) t1;
 
 
-CREATE VIEW dds.v_iv_counterparty AS
+CREATE VIEW dds.v_iv_counterparty 
+(
+counterparty_uuid String,
+counterparty_salepoint_uuid String,
+--бизнесс данные
+inn_code String,
+counterparty_name String,
+the_subject_code String,
+the_subject_name String,
+settlement_name String,
+district_name String,
+address_name String,
+md_system_code String,
+
+-- обязательные поля
+effective_from_dttm DateTime,
+effective_to_dttm DateTime,
+processed_dttm DateTime,
+deleted_flg bool,
+src String,
+hash_diff String
+) AS
 SELECT t1.* EXCEPT (processed_dttm_max), processed_dttm_max AS processed_dttm
 FROM (
     SELECT

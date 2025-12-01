@@ -29,8 +29,6 @@ FROM (
         max(processed_dttm) AS processed_dttm_max
 
     FROM dds.hub_product
-    WHERE processed_dttm
-          BETWEEN {p_from_dttm:DateTime} AND {p_to_dttm:DateTime}
     GROUP BY product_uuid
     HAVING deleted_flg = false
 ) t1;
@@ -133,7 +131,7 @@ deleted_flg bool,
 src String,
 hash_diff String
 )
-ENGINE = ReplacingMergeTree
+ENGINE = MergeTree
 order by (product_uuid, hash_diff)
 
 CREATE VIEW dds.v_sn_product AS
@@ -194,7 +192,6 @@ FROM (
         max(processed_dttm) AS processed_dttm_max
 
     FROM dds.product
-    WHERE processed_dttm BETWEEN {p_from_dttm:DateTime} AND {p_to_dttm:DateTime}
     GROUP BY product_uuid, hash_diff
     HAVING deleted_flg = false
 ) t1;
