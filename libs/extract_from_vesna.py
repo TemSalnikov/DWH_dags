@@ -91,6 +91,9 @@ def extract_xls(path='', name_report='Закуп_Продажи_Остатки',
                 df[col] = None
         
         df_report = df[final_column_order]
+        
+        # Преобразуем колонку с датой в строку, чтобы избежать ошибок сериализации
+        df_report['operation_date'] = df_report['operation_date'].dt.strftime('%Y-%m-%d %H:%M:%S')
 
         return {
             'table_report': df_report
