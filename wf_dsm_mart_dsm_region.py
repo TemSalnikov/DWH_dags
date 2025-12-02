@@ -97,7 +97,7 @@ logger = LoggingMixin().log
     tags=['oracle', 'clickhouse', 'data_migration']
 )
 def wf_dsm_mart_dsm_region():
-    tgt_table_name = 'mart_dsm_region'
+    tgt_table_name = 'stg.mart_dsm_region'
     @task
     def load_altay_reg():
         """Загрузка новых данных из V$ALTAY_REG """
