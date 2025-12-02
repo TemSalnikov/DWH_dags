@@ -72,7 +72,7 @@ logger = LoggingMixin().log
 def wf_dsm_mart_dsm_sale_product():
     
     src_table_name = 'DATA_MART."V$ALTAY_DICT"' #название таблицы-источника
-    tgt_table_name = 'mart_dsm_stat_product' #название целевой таблицы
+    tgt_table_name = 'stg.mart_dsm_stat_product' #название целевой таблицы
     pk_list = ['cd_u'] #список полей PK источника
     tmp_table_name = f"tmp.tmp_{tgt_table_name}" # Название для временной таблицы
 
