@@ -2,7 +2,6 @@ import pandas as pd
 import uuid
 import os
 from datetime import datetime
-import openpyxl
 from airflow.utils.log.logging_mixin import LoggingMixin
 
 def get_dates_from_filename(path):
