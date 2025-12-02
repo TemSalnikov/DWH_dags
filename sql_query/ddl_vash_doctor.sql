@@ -7,6 +7,7 @@ create table stg.mart_fpc_vash_doctor_report on cluster cluster_2S_2R
 	city text,
 	street text, 
 	product text,
+	supplier text
 	sale_quantity text,
 	name_report text,
 	name_pharm_chain text,
@@ -27,6 +28,7 @@ create table kafka.fpc_vash_doctor_report on cluster cluster_2S_2R
 	city text,
 	street text, 
 	product text,
+	supplier text,
 	sale_quantity text,
 	name_report text,
 	name_pharm_chain text,

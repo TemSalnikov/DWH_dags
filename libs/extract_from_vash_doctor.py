@@ -3,6 +3,7 @@ import uuid
 import os
 import openpyxl
 from datetime import datetime
+import re
 from airflow.utils.log.logging_mixin import LoggingMixin
 
 def get_dates_from_filename(path):
@@ -17,7 +18,17 @@ def get_dates_from_filename(path):
     except Exception as e:
         raise ValueError(f"Имя файла должно быть в формате ММ_ГГГГ.xlsx. Ошибка: {e}")
 
-# --- парсер закупок с поставщиками ---
+LEGAL_ENTITY_PATTERN = re.compile(r'\b(ооо|ао|зао|ип|фк|нпк)\b', re.IGNORECASE)
+
+# Список известных поставщиков-исключений, не содержащих признаков юр. лица.
+# Используется для файлов, где отсутствуют отступы.
+KNOWN_SUPPLIERS = {
+    "АГРОРЕСУРСЫ",
+    "ПРОТЕК КЕМЕРОВО",
+    "ПРОТЕК НСК",
+}
+
+# парсер закупок с поставщиками
 def parse_purchases_with_openpyxl(path):
     """
     Парсит закупки с учетом иерархии (Продукт -> Поставщик).
@@ -26,6 +37,7 @@ def parse_purchases_with_openpyxl(path):
     - Если нет филиалов (2024) -> берет "Общий итог".
     """
     wb = openpyxl.load_workbook(path, data_only=True)
+    loger = LoggingMixin().log
     sheet = wb.active
     
     data_rows = []
@@ -51,6 +63,14 @@ def parse_purchases_with_openpyxl(path):
     
     value_headers = [h for h in headers if h['idx'] != name_col_idx]
     
+    # Определение формата файла: с отступами или без
+    file_has_indents = False
+    for row in rows[header_row_idx + 1:]:
+        if row[name_col_idx].alignment and row[name_col_idx].alignment.indent:
+            file_has_indents = True
+            break
+    loger.info(f"Формат файла определен: {'с отступами' if file_has_indents else 'без отступов'}.")
+
     has_branches = any("Общий итог" not in h['name'] for h in value_headers)
     
     current_product = None
@@ -64,9 +84,21 @@ def parse_purchases_with_openpyxl(path):
         if not val_name or "Названия строк" in val_name or val_name == "Общий итог":
             continue
             
-        indent = int(cell_name.alignment.indent) if cell_name.alignment.indent else 0
-        
-        if indent == 0:
+        # логика для определения типа строки
+        is_supplier_row = False
+        if file_has_indents:
+            # Если в файле есть отступы, доверяем только им
+            indent = int(cell_name.alignment.indent) if cell_name.alignment.indent else 0
+            if indent > 0:
+                is_supplier_row = True
+        else:
+            # Если отступов нет, используем регулярное выражение
+            is_legal_entity = bool(LEGAL_ENTITY_PATTERN.search(val_name))
+            is_known_supplier = val_name.upper() in KNOWN_SUPPLIERS
+            if is_legal_entity or is_known_supplier:
+                is_supplier_row = True
+                
+        if not is_supplier_row:
             current_product = val_name
         else:
             if current_product:
@@ -101,7 +133,7 @@ def parse_purchases_with_openpyxl(path):
 
     return pd.DataFrame(data_rows)
 
-# --- парсер для продаж и остатков ---
+# парсер для продаж и остатков
 def parse_standard_pandas(path):
     df_raw = pd.read_excel(path, header=None)
     
@@ -245,7 +277,7 @@ def extract_all_xls(path='', name_report='Продажи', name_pharm_chain='В�
         raise
 
 if __name__ == "__main__": 
-    test_path = r'C:\Users\nmankov\Desktop\отчеты\Ваш доктор\Продажи\2025\01_2025.xlsx'
+    test_path = r'C:\Users\nmankov\Desktop\отчеты\Ваш доктор\Продажи\2025\03_2025.xlsx'
     
     if os.path.exists(test_path):
         result = extract_all_xls(path=test_path, name_report='Продажи')

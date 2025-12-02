@@ -9,8 +9,8 @@ from airflow.decorators import task
 from airflow.utils.log.logging_mixin import LoggingMixin
 
 CLICKHOUSE_CONN: dict[str, str | int] = {
-    'host': '192.168.14.235',
-    'port': 9001,
+    'host': 'clickhouse01',
+    'port': 9000,
     'user': 'admin',
     'password': 'admin'
 }
