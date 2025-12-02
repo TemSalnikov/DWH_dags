@@ -7,52 +7,59 @@ import pandas as pd
 import oracledb
 import hashlib
 
-ORACLE_CONN = {
-    'user': 'ALTAYV',
-    'password': 'sSwM913_xoAY', 
-    'host': 'dsmviewer.ru',
-    'port': 27091,
-    'sid': 'webiasdb2'
-}
+import os
+import sys 
+script_path = os.path.abspath(__file__)
+project_path = os.path.dirname(script_path)+'/libs'
+sys.path.append(project_path)
+from functions_dwh.functions_dsm import get_oracle_connection, get_clickhouse_client, compute_row_hash
 
-CLICKHOUSE_CONN: dict[str, str | int] = {
-    'host': '192.168.14.235',
-    'port': 9001,
-    'user': 'admin',
-    'password': 'admin',
-    'database': 'stg'
-}
+# ORACLE_CONN = {
+#     'user': 'ALTAYV',
+#     'password': 'sSwM913_xoAY', 
+#     'host': 'dsmviewer.ru',
+#     'port': 27091,
+#     'sid': 'webiasdb2'
+# }
 
-# Функции подключения к БД
-def get_oracle_connection():
-    dsn = f"{ORACLE_CONN['host']}:{ORACLE_CONN['port']}/{ORACLE_CONN['sid']}"
-    return oracledb.connect(
-        user=ORACLE_CONN['user'],
-        password=ORACLE_CONN['password'],
-        dsn=dsn
-    )
+# CLICKHOUSE_CONN: dict[str, str | int] = {
+#     'host': '192.168.14.235',
+#     'port': 9001,
+#     'user': 'admin',
+#     'password': 'admin',
+#     'database': 'stg'
+# }
 
-def get_clickhouse_client() -> Client:
-    """Создает и возвращает клиент ClickHouse"""
-    return Client(
-        host=CLICKHOUSE_CONN['host'],
-        port=CLICKHOUSE_CONN['port'],
-        user=CLICKHOUSE_CONN['user'],
-        password=CLICKHOUSE_CONN['password'],
-        database=CLICKHOUSE_CONN['database']
-    )
+# # Функции подключения к БД
+# def get_oracle_connection():
+#     dsn = f"{ORACLE_CONN['host']}:{ORACLE_CONN['port']}/{ORACLE_CONN['sid']}"
+#     return oracledb.connect(
+#         user=ORACLE_CONN['user'],
+#         password=ORACLE_CONN['password'],
+#         dsn=dsn
+#     )
+
+# def get_clickhouse_client() -> Client:
+#     """Создает и возвращает клиент ClickHouse"""
+#     return Client(
+#         host=CLICKHOUSE_CONN['host'],
+#         port=CLICKHOUSE_CONN['port'],
+#         user=CLICKHOUSE_CONN['user'],
+#         password=CLICKHOUSE_CONN['password'],
+#         database=CLICKHOUSE_CONN['database']
+#     )
 
 # Настройка логирования
 logger = LoggingMixin().log
 
-def compute_row_hash(row, columns=None):
-    """Создает хеш строки"""
-    if columns:
-        row = row[columns]
-    # Преобразуем все значения строки в строки и объединяем их
-    row_string = ''.join(str(value) for value in row)
-    # Создаем хеш используя SHA-256
-    return hashlib.sha256(row_string.encode()).hexdigest()
+# def compute_row_hash(row, columns=None):
+#     """Создает хеш строки"""
+#     if columns:
+#         row = row[columns]
+#     # Преобразуем все значения строки в строки и объединяем их
+#     row_string = ''.join(str(value) for value in row)
+#     # Создаем хеш используя SHA-256
+#     return hashlib.sha256(row_string.encode()).hexdigest()
 
 @dag(
     dag_id='wf_dsm_mart_dsm_sale_product',
