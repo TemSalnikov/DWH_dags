@@ -11,6 +11,7 @@ sys.path.append(project_path)
 import dds_group_tasks.task_group_creation_surogate as tg_sur
 import dds_group_tasks.task_group_creation_surogate_salepoint as tg_sur_salepoint
 from functions_dwh.functions_dds import load_delta, save_meta
+import json
 
 
 
@@ -33,8 +34,12 @@ default_args = {
     catchup=False,
     tags=['advanced'],
     params = {
-        "p_version_prev": Param('2025-01-01 00:01:01', type = "string", title = "Processed_dttm предыдущей выгрузки"),
-        "p_version_new": Param('2025-01-02 00:01:01', type = "string", title = "Processed_dttm новой выгрузки")
+        "p_version_prev": Param({'mart_mdlp_general_report_on_disposal':'2025-01-01',
+                                 'mart_mdlp_general_pricing_report':'2025-01-01',
+                                 'mart_mdlp_general_report_on_movement':'2025-01-01'}, title = "Dict с create_dttm предыдущей выгрузки иточников"),
+        "p_version_new": Param({'mart_mdlp_general_report_on_disposal':'2025-01-01',
+                                 'mart_mdlp_general_pricing_report':'2025-01-01',
+                                 'mart_mdlp_general_report_on_movement':'2025-01-01'}, title = "Dict с create_dttm новой выгрузки иточников")
     }
 )
 
@@ -59,20 +64,33 @@ def wf_app_mdlp_stg_dds_counterparty():
     @task
     def prepare_parameters(data_ready: bool, **context) -> dict:
         if data_ready:
+            logger = LoggingMixin().log
             dag_run_conf = context["dag_run"].conf if "dag_run" in context else {}
-            parameters = {**context["params"], **dag_run_conf}
+            # for name_par, val_par in context["params"].items():
+            #     dag_run_conf[name_par] = json.loads(val_par)
+            
+            # logger.info(f"Получен набор параметров: {context["params"]}")
+            logger.info(f"Обработанный набор параметров набор параметров: {dag_run_conf}")
+            parameters = {**context["params"]
+                        #   , **dag_run_conf
+                          }
+            logger.info(f"Получен набор параметров: {parameters}, {type(parameters)}")
             return parameters
         else: 
             raise Exception("Data not ready")
 
     # Алгоритм 1: mart_mdlp_general_report_on_disposal (полные данные участника)
     @task
-    def get_inc_load_data_algo1(p_version_prev: str, p_version_new: str) -> str:
+    def get_inc_load_data_algo1(p_version: dict, name_src_tbl:str) -> str:
         client = None
+        logger = LoggingMixin().log
         tmp_table_name = f"tmp.tmp_algo1_{tg_sur.uuid.uuid4().hex}"
-        
+        logger.info(f"получены параметры: {p_version}: {type(p_version)}")
+        p_version_prev = p_version['p_version_prev'][name_src_tbl][:19]
+        p_version_new = p_version['p_version_new'][name_src_tbl][:19]
+        logger.info(f"получены параметры: {p_version_prev}: {p_version_new}")
         try:
-            logger = LoggingMixin().log
+            
             client = tg_sur.get_clickhouse_client()
             logger.info("Подключение к ClickHouse успешно выполнено")
             
@@ -89,31 +107,25 @@ def wf_app_mdlp_stg_dds_counterparty():
                 the_subject_of_the_russian_federation as the_subject_name,
                 settlement as settlement_name,
                 district as district_name,
-                trim(replaceRegexpAll(
-                        replaceRegexpAll(
-                            replaceRegexpAll(address, '\\d{6}', ''),
-                            ',\\s*,', 
-                            ','
-                        ),
-                        '\\s+', ' ' )
-                    ) as address_name,
+                trim(BOTH ', ' FROM 
+				        if(
+				            match(address, '^[0-9]{6}'),
+				            -- Если индекс в начале
+				            replaceRegexpOne(address, '^[0-9]{6},?\\s*', ''),
+				            -- Если индекс в конце  
+				            replaceRegexpOne(address, ',\\s*[0-9]{6}$', '')
+				        )
+				    )
+                 as address_name,
                 identifier_md_participant as md_system_code,
                 'MDLP' as src,
                 toDateTime('1990-01-01 00:01:01') as effective_dttm,
                 1 as algorithm_type,
-                concat(toString(tin_of_the_participant), '^^', trim(replaceRegexpAll(
-                                                                        replaceRegexpAll(
-                                                                            replaceRegexpAll(address, '\\d{6}', ''),
-                                                                            ',\\s*,', 
-                                                                            ','
-                                                                        ),
-                                                                        '\\s+', ' ' )
-                                                                    )) as salepoint_business_key
-            FROM stg.v_iv_mart_mdlp_general_report_on_disposal
-            WHERE processed_dttm BETWEEN '{p_version_prev}' AND '{p_version_new}'
+                concat(toString(tin_of_the_participant), '^^', address_name) as salepoint_business_key
+            FROM stg.v_iv_mart_mdlp_general_report_on_disposal(p_from_dttm = '{p_version_prev}', p_to_dttm = '{p_version_new}')
             """
             
-            logger.info(f"Создан запрос для алгоритма 1: {tmp_table_name}")
+            logger.info(f"Создан запрос для алгоритма 1: {tmp_table_name}: \n {query}")
             client.execute(query)
             logger.info(f"Создана временная таблица {tmp_table_name} для алгоритма 1")
             
@@ -129,7 +141,7 @@ def wf_app_mdlp_stg_dds_counterparty():
 
     # Алгоритм 2: mart_mdlp_general_report_on_disposal (эмитент)
     @task
-    def get_inc_load_data_algo2(p_version_prev: str, p_version_new: str) -> str:
+    def get_inc_load_data_algo2(p_version: dict, name_src_tbl:str) -> str:
         client = None
         tmp_table_name = f"tmp.tmp_algo2_{tg_sur.uuid.uuid4().hex}"
         
@@ -137,7 +149,8 @@ def wf_app_mdlp_stg_dds_counterparty():
             logger = LoggingMixin().log
             client = tg_sur.get_clickhouse_client()
             logger.info("Подключение к ClickHouse успешно выполнено")
-            
+            p_version_prev = p_version['p_version_prev'][name_src_tbl][:19]
+            p_version_new = p_version['p_version_new'][name_src_tbl][:19]
             query = f"""
             CREATE TABLE {tmp_table_name} 
             ENGINE = MergeTree()
@@ -147,21 +160,20 @@ def wf_app_mdlp_stg_dds_counterparty():
             SELECT 
                 tin_to_the_issuer as inn_code,
                 the_name_of_the_issuer as counterparty_name,
-                NULL as the_subject_code,
-                NULL as the_subject_name,
-                NULL as settlement_name,
-                NULL as district_name,
+                '' as the_subject_code,
+                '' as the_subject_name,
+                '' as settlement_name,
+                '' as district_name,
                 'DEFAULT_SALEPOINT' as address_name,
-                NULL as md_system_code,
+                '' as md_system_code,
                 'MDLP' as src,
                 toDateTime('1990-01-01 00:01:01') as effective_dttm,
                 2 as algorithm_type,
                 concat(toString(tin_to_the_issuer), '^^', 'DEFAULT_SALEPOINT') as salepoint_business_key
-            FROM stg.v_iv_mart_mdlp_general_report_on_disposal
-            WHERE processed_dttm BETWEEN '{p_version_prev}' AND '{p_version_new}'
+            FROM stg.v_iv_mart_mdlp_general_report_on_disposal(p_from_dttm = '{p_version_prev}', p_to_dttm = '{p_version_new}')
             """
             
-            logger.info(f"Создан запрос для алгоритма 2: {tmp_table_name}")
+            logger.info(f"Создан запрос для алгоритма 2: {query}")
             client.execute(query)
             logger.info(f"Создана временная таблица {tmp_table_name} для алгоритма 2")
             
@@ -177,7 +189,7 @@ def wf_app_mdlp_stg_dds_counterparty():
 
     # Алгоритм 3: mart_mdlp_general_pricing_report (эмитент)
     @task
-    def get_inc_load_data_algo3(p_version_prev: str, p_version_new: str) -> str:
+    def get_inc_load_data_algo3(p_version: dict, name_src_tbl:str) -> str:
         client = None
         tmp_table_name = f"tmp.tmp_algo3_{tg_sur.uuid.uuid4().hex}"
         
@@ -185,7 +197,8 @@ def wf_app_mdlp_stg_dds_counterparty():
             logger = LoggingMixin().log
             client = tg_sur.get_clickhouse_client()
             logger.info("Подключение к ClickHouse успешно выполнено")
-            
+            p_version_prev = p_version['p_version_prev'][name_src_tbl][:19]
+            p_version_new = p_version['p_version_new'][name_src_tbl][:19]
             query = f"""
             CREATE TABLE {tmp_table_name} 
             ENGINE = MergeTree()
@@ -195,21 +208,20 @@ def wf_app_mdlp_stg_dds_counterparty():
             SELECT 
                 tin_to_the_issuer as inn_code,
                 the_name_of_the_issuer as counterparty_name,
-                NULL as the_subject_code,
-                NULL as the_subject_name,
-                NULL as settlement_name,
-                NULL as district_name,
+                '' as the_subject_code,
+                '' as the_subject_name,
+                '' as settlement_name,
+                '' as district_name,
                 'DEFAULT_SALEPOINT' as address_name,
-                NULL as md_system_code,
+                '' as md_system_code,
                 'MDLP' as src,
                 toDateTime('1990-01-01 00:01:01') as effective_dttm,
                 3 as algorithm_type,
                 concat(toString(tin_to_the_issuer), '^^', 'DEFAULT_SALEPOINT') as salepoint_business_key
-            FROM stg.v_iv_mart_mdlp_general_pricing_report
-            WHERE processed_dttm BETWEEN '{p_version_prev}' AND '{p_version_new}'
+            FROM stg.v_iv_mart_mdlp_general_pricing_report(p_from_dttm = '{p_version_prev}', p_to_dttm = '{p_version_new}')
             """
             
-            logger.info(f"Создан запрос для алгоритма 3: {tmp_table_name}")
+            logger.info(f"Создан запрос для алгоритма 3: {query}")
             client.execute(query)
             logger.info(f"Создана временная таблица {tmp_table_name} для алгоритма 3")
             
@@ -225,7 +237,7 @@ def wf_app_mdlp_stg_dds_counterparty():
 
     # Алгоритм 4: mart_mdlp_general_pricing_report (участник)
     @task
-    def get_inc_load_data_algo4(p_version_prev: str, p_version_new: str) -> str:
+    def get_inc_load_data_algo4(p_version: dict, name_src_tbl:str) -> str:
         client = None
         tmp_table_name = f"tmp.tmp_algo4_{tg_sur.uuid.uuid4().hex}"
         
@@ -233,7 +245,8 @@ def wf_app_mdlp_stg_dds_counterparty():
             logger = LoggingMixin().log
             client = tg_sur.get_clickhouse_client()
             logger.info("Подключение к ClickHouse успешно выполнено")
-            
+            p_version_prev = p_version['p_version_prev'][name_src_tbl][:19]
+            p_version_new = p_version['p_version_new'][name_src_tbl][:19]
             query = f"""
             CREATE TABLE {tmp_table_name} 
             ENGINE = MergeTree()
@@ -245,19 +258,18 @@ def wf_app_mdlp_stg_dds_counterparty():
                 name_of_the_participant as counterparty_name,
                 code_of_the_subject_of_the_russian_federation as the_subject_code,
                 the_subject_of_the_russian_federation as the_subject_name,
-                NULL as settlement_name,
-                NULL as district_name,
+                '' as settlement_name,
+                '' as district_name,
                 'DEFAULT_SALEPOINT' as address_name,
-                NULL as md_system_code,
+                '' as md_system_code,
                 'MDLP' as src,
                 toDateTime('1990-01-01 00:01:01') as effective_dttm,
                 4 as algorithm_type,
                 concat(toString(tin_of_the_participant), '^^', 'DEFAULT_SALEPOINT') as salepoint_business_key
-            FROM stg.v_iv_mart_mdlp_general_pricing_report
-            WHERE processed_dttm BETWEEN '{p_version_prev}' AND '{p_version_new}'
+            FROM stg.v_iv_mart_mdlp_general_pricing_report(p_from_dttm = '{p_version_prev}', p_to_dttm = '{p_version_new}')
             """
             
-            logger.info(f"Создан запрос для алгоритма 4: {tmp_table_name}")
+            logger.info(f"Создан запрос для алгоритма 4: {query}")
             client.execute(query)
             logger.info(f"Создана временная таблица {tmp_table_name} для алгоритма 4")
             
@@ -273,7 +285,7 @@ def wf_app_mdlp_stg_dds_counterparty():
 
     # Алгоритм 5: mart_mdlp_general_report_on_movement (эмитент)
     @task
-    def get_inc_load_data_algo5(p_version_prev: str, p_version_new: str) -> str:
+    def get_inc_load_data_algo5(p_version: dict, name_src_tbl:str) -> str:
         client = None
         tmp_table_name = f"tmp.tmp_algo5_{tg_sur.uuid.uuid4().hex}"
         
@@ -281,7 +293,8 @@ def wf_app_mdlp_stg_dds_counterparty():
             logger = LoggingMixin().log
             client = tg_sur.get_clickhouse_client()
             logger.info("Подключение к ClickHouse успешно выполнено")
-            
+            p_version_prev = p_version['p_version_prev'][name_src_tbl][:19]
+            p_version_new = p_version['p_version_new'][name_src_tbl][:19]
             query = f"""
             CREATE TABLE {tmp_table_name} 
             ENGINE = MergeTree()
@@ -291,21 +304,20 @@ def wf_app_mdlp_stg_dds_counterparty():
             SELECT 
                 tin_to_the_issuer as inn_code,
                 the_name_of_the_issuer as counterparty_name,
-                NULL as the_subject_code,
-                NULL as the_subject_name,
-                NULL as settlement_name,
-                NULL as district_name,
+                '' as the_subject_code,
+                '' as the_subject_name,
+                '' as settlement_name,
+                '' as district_name,
                 'DEFAULT_SALEPOINT' as address_name,
-                NULL as md_system_code,
+                '' as md_system_code,
                 'MDLP' as src,
                 toDateTime('1990-01-01 00:01:01') as effective_dttm,
                 5 as algorithm_type,
                 concat(toString(tin_to_the_issuer), '^^', 'DEFAULT_SALEPOINT') as salepoint_business_key
-            FROM stg.v_iv_mart_mdlp_general_report_on_movement
-            WHERE processed_dttm BETWEEN '{p_version_prev}' AND '{p_version_new}'
+            FROM stg.v_iv_mart_mdlp_general_report_on_movement(p_from_dttm = '{p_version_prev}', p_to_dttm = '{p_version_new}')
             """
             
-            logger.info(f"Создан запрос для алгоритма 5: {tmp_table_name}")
+            logger.info(f"Создан запрос для алгоритма 5: {query}")
             client.execute(query)
             logger.info(f"Создана временная таблица {tmp_table_name} для алгоритма 5")
             
@@ -321,7 +333,7 @@ def wf_app_mdlp_stg_dds_counterparty():
 
     # Алгоритм 6: mart_mdlp_general_report_on_movement (отправитель)
     @task
-    def get_inc_load_data_algo6(p_version_prev: str, p_version_new: str) -> str:
+    def get_inc_load_data_algo6(p_version: dict, name_src_tbl:str) -> str:
         client = None
         tmp_table_name = f"tmp.tmp_algo6_{tg_sur.uuid.uuid4().hex}"
         
@@ -329,7 +341,8 @@ def wf_app_mdlp_stg_dds_counterparty():
             logger = LoggingMixin().log
             client = tg_sur.get_clickhouse_client()
             logger.info("Подключение к ClickHouse успешно выполнено")
-            
+            p_version_prev = p_version['p_version_prev'][name_src_tbl][:19]
+            p_version_new = p_version['p_version_new'][name_src_tbl][:19]
             query = f"""
             CREATE TABLE {tmp_table_name} 
             ENGINE = MergeTree()
@@ -338,22 +351,21 @@ def wf_app_mdlp_stg_dds_counterparty():
             AS 
             SELECT 
                 tin_of_the_sender as inn_code,
-                NULL as counterparty_name,
-                NULL as the_subject_code,
-                NULL as the_subject_name,
-                NULL as settlement_name,
-                NULL as district_name,
+                '' as counterparty_name,
+                '' as the_subject_code,
+                '' as the_subject_name,
+                '' as settlement_name,
+                '' as district_name,
                 'DEFAULT_SALEPOINT' as address_name,
                 identifier_md_of_the_sender as md_system_code,
                 'MDLP' as src,
                 toDateTime('1990-01-01 00:01:01') as effective_dttm,
                 6 as algorithm_type,
                 concat(toString(tin_of_the_sender), '^^', 'DEFAULT_SALEPOINT') as salepoint_business_key
-            FROM stg.v_iv_mart_mdlp_general_report_on_movement
-            WHERE processed_dttm BETWEEN '{p_version_prev}' AND '{p_version_new}'
+            FROM stg.v_iv_mart_mdlp_general_report_on_movement(p_from_dttm = '{p_version_prev}', p_to_dttm = '{p_version_new}')
             """
             
-            logger.info(f"Создан запрос для алгоритма 6: {tmp_table_name}")
+            logger.info(f"Создан запрос для алгоритма 6: {query}")
             client.execute(query)
             logger.info(f"Создана временная таблица {tmp_table_name} для алгоритма 6")
             
@@ -369,7 +381,7 @@ def wf_app_mdlp_stg_dds_counterparty():
 
     # Алгоритм 7: mart_mdlp_general_report_on_movement (получатель)
     @task
-    def get_inc_load_data_algo7(p_version_prev: str, p_version_new: str) -> str:
+    def get_inc_load_data_algo7(p_version: dict, name_src_tbl:str) -> str:
         client = None
         tmp_table_name = f"tmp.tmp_algo7_{tg_sur.uuid.uuid4().hex}"
         
@@ -377,7 +389,8 @@ def wf_app_mdlp_stg_dds_counterparty():
             logger = LoggingMixin().log
             client = tg_sur.get_clickhouse_client()
             logger.info("Подключение к ClickHouse успешно выполнено")
-            
+            p_version_prev = p_version['p_version_prev'][name_src_tbl][:19]
+            p_version_new = p_version['p_version_new'][name_src_tbl][:19]
             query = f"""
             CREATE TABLE {tmp_table_name} 
             ENGINE = MergeTree()
@@ -387,21 +400,20 @@ def wf_app_mdlp_stg_dds_counterparty():
             SELECT 
                 tin_of_the_recipient as inn_code,
                 name_of_the_recipient as counterparty_name,
-                NULL as the_subject_code,
-                NULL as the_subject_name,
-                NULL as settlement_name,
-                NULL as district_name,
+                '' as the_subject_code,
+                '' as the_subject_name,
+                '' as settlement_name,
+                '' as district_name,
                 'DEFAULT_SALEPOINT' as address_name,
                 identifier_md_of_the_recipient as md_system_code,
                 'MDLP' as src,
                 toDateTime('1990-01-01 00:01:01') as effective_dttm,
                 7 as algorithm_type,
                 concat(toString(tin_of_the_recipient), '^^', 'DEFAULT_SALEPOINT') as salepoint_business_key
-            FROM stg.v_iv_mart_mdlp_general_report_on_movement
-            WHERE processed_dttm BETWEEN '{p_version_prev}' AND '{p_version_new}'
+            FROM stg.v_iv_mart_mdlp_general_report_on_movement(p_from_dttm = '{p_version_prev}', p_to_dttm = '{p_version_new}')
             """
             
-            logger.info(f"Создан запрос для алгоритма 7: {tmp_table_name}")
+            logger.info(f"Создан запрос для алгоритма 7: {query}")
             client.execute(query)
             logger.info(f"Создана временная таблица {tmp_table_name} для алгоритма 7")
             
@@ -491,12 +503,12 @@ def wf_app_mdlp_stg_dds_counterparty():
                 toDateTime('1990-01-01 00:01:01') as effective_from_dttm,
                 toDateTime('2999-12-31 23:59:59') as effective_to_dttm
             FROM {inc_table} t
-            LEFT JOIN {counterparty_hub_table} hc 
+            LEFT JOIN dds.v_sn_{counterparty_hub_table[4:]} hc 
                 ON t.inn_code = hc.counterparty_id 
                 AND t.src = hc.src 
                 AND hc.effective_from_dttm <= t.effective_dttm
                 AND hc.effective_to_dttm > t.effective_dttm
-            LEFT JOIN {salepoint_hub_table} hs 
+            LEFT JOIN dds.v_sn_{salepoint_hub_table[4:]} hs 
                 ON ngramDistanceUTF8(t.salepoint_business_key, hs.counterparty_salepoint_id) <= {threshold}
                 AND t.src = hs.src 
                 AND hs.effective_from_dttm <= t.effective_dttm
@@ -522,13 +534,14 @@ def wf_app_mdlp_stg_dds_counterparty():
     parameters_task = prepare_parameters(check_task)
     
     # Параллельное выполнение всех алгоритмов
-    algo1_task = get_inc_load_data_algo1(parameters_task['p_version_prev'], parameters_task['p_version_new'])
-    algo2_task = get_inc_load_data_algo2(parameters_task['p_version_prev'], parameters_task['p_version_new'])
-    algo3_task = get_inc_load_data_algo3(parameters_task['p_version_prev'], parameters_task['p_version_new'])
-    algo4_task = get_inc_load_data_algo4(parameters_task['p_version_prev'], parameters_task['p_version_new'])
-    algo5_task = get_inc_load_data_algo5(parameters_task['p_version_prev'], parameters_task['p_version_new'])
-    algo6_task = get_inc_load_data_algo6(parameters_task['p_version_prev'], parameters_task['p_version_new'])
-    algo7_task = get_inc_load_data_algo7(parameters_task['p_version_prev'], parameters_task['p_version_new'])
+    algo1_task = get_inc_load_data_algo1(parameters_task, name_src_tbl = 'mart_mdlp_general_report_on_disposal')
+    algo2_task = get_inc_load_data_algo2(parameters_task, name_src_tbl = 'mart_mdlp_general_report_on_disposal')
+    algo3_task = get_inc_load_data_algo3(parameters_task, name_src_tbl = 'mart_mdlp_general_pricing_report')
+    algo4_task = get_inc_load_data_algo4(parameters_task,name_src_tbl = 'mart_mdlp_general_pricing_report')
+    algo5_task = get_inc_load_data_algo5(parameters_task,name_src_tbl = 'mart_mdlp_general_pricing_report')
+    algo6_task = get_inc_load_data_algo6(parameters_task,name_src_tbl = 'mart_mdlp_general_report_on_movement')
+    algo7_task = get_inc_load_data_algo7(parameters_task, name_src_tbl = 'mart_mdlp_general_report_on_movement')
+    
     
     # Объединение результатов всех алгоритмов
     union_table_task = union_all_algorithms(algo1_task, algo2_task, algo3_task, algo4_task, 
@@ -539,7 +552,7 @@ def wf_app_mdlp_stg_dds_counterparty():
         hub_counterparty_table,
         union_table_task,
         'inn_code',
-        'counterparty_pk',
+        'counterparty_uuid',
         'counterparty_id'
     )
     
@@ -548,7 +561,7 @@ def wf_app_mdlp_stg_dds_counterparty():
         hub_salepoint_table,
         union_table_task,
         'salepoint_business_key',
-        'counterparty_salepoint_pk',
+        'counterparty_salepoint_uuid',
         'counterparty_salepoint_id'
     )
     

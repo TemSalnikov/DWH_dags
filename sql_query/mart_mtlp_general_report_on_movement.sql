@@ -79,3 +79,113 @@ MODIFY column deleted_flag bool;
 
 select uuid_report, count(*) from cluster('cluster_2S_2R', 'stg', 'mart_mdlp_general_report_on_movement')
 group by uuid_report
+
+
+CREATE VIEW stg.v_sn_mart_mdlp_general_report_on_movement AS
+SELECT t1.* EXCEPT (create_dttm_max), create_dttm_max AS create_dttm
+FROM (
+    SELECT
+        the_date_of_the_operation,
+        tin_to_the_issuer,
+		mnn,
+		gtin,
+
+        argMax(the_name_of_the_issuer, toDateTime64(create_dttm, 0)) AS the_name_of_the_issuer,
+        argMax(trade_name, toDateTime64(create_dttm, 0)) AS trade_name,
+        argMax(series, toDateTime64(create_dttm, 0)) AS series,
+        argMax(operation_number, toDateTime64(create_dttm, 0)) AS operation_number,
+        argMax(tin_of_the_sender, toDateTime64(create_dttm, 0)) AS tin_of_the_sender,
+        argMax(name_of_the_sender, toDateTime64(create_dttm, 0)) AS name_of_the_sender,
+        argMax(identifier_md_of_the_sender, toDateTime64(create_dttm, 0)) AS identifier_md_of_the_sender,
+        argMax(tin_of_the_recipient, toDateTime64(create_dttm, 0)) AS tin_of_the_recipient,
+        argMax(name_of_the_recipient, toDateTime64(create_dttm, 0)) AS name_of_the_recipient,
+        argMax(identifier_md_of_the_recipient, toDateTime64(create_dttm, 0)) AS identifier_md_of_the_recipient,
+        argMax(quantity_units, toDateTime64(create_dttm, 0)) AS quantity_units,
+        argMax(source_of_financing, toDateTime64(create_dttm, 0)) AS source_of_financing,
+        argMax(data_update_date, toDateTime64(create_dttm, 0)) AS data_update_date,
+        argMax(type_report, toDateTime64(create_dttm, 0)) AS type_report,
+        argMax(date_to, toDateTime64(create_dttm, 0)) AS date_to,
+        argMax(uuid_report, toDateTime64(create_dttm, 0)) AS uuid_report,
+
+        -- технические поля
+        argMax(deleted_flag, toDateTime64(create_dttm, 0)) AS deleted_flag,
+        max(toDateTime64(create_dttm, 0)) AS create_dttm_max
+
+    FROM stg.mart_mdlp_general_report_on_movement
+    WHERE toDateTime64(create_dttm, 0) BETWEEN {p_from_dttm:DateTime} AND {p_to_dttm:DateTime}
+    GROUP BY gtin, tin_to_the_issuer, mnn, the_date_of_the_operation
+    HAVING deleted_flag = false
+) t1;
+
+CREATE VIEW IF NOT EXISTS stg.v_sv_mart_mdlp_general_report_on_movement AS
+SELECT t1.* EXCEPT (create_dttm_max), create_dttm_max AS create_dttm
+FROM (
+    SELECT
+		the_date_of_the_operation,
+        tin_to_the_issuer,
+		mnn,
+		gtin,
+
+        argMax(the_name_of_the_issuer, toDateTime64(create_dttm, 0)) AS the_name_of_the_issuer,
+        argMax(trade_name, toDateTime64(create_dttm, 0)) AS trade_name,
+        argMax(series, toDateTime64(create_dttm, 0)) AS series,
+        argMax(operation_number, toDateTime64(create_dttm, 0)) AS operation_number,
+        argMax(tin_of_the_sender, toDateTime64(create_dttm, 0)) AS tin_of_the_sender,
+        argMax(name_of_the_sender, toDateTime64(create_dttm, 0)) AS name_of_the_sender,
+        argMax(identifier_md_of_the_sender, toDateTime64(create_dttm, 0)) AS identifier_md_of_the_sender,
+        argMax(tin_of_the_recipient, toDateTime64(create_dttm, 0)) AS tin_of_the_recipient,
+        argMax(name_of_the_recipient, toDateTime64(create_dttm, 0)) AS name_of_the_recipient,
+        argMax(identifier_md_of_the_recipient, toDateTime64(create_dttm, 0)) AS identifier_md_of_the_recipient,
+        argMax(quantity_units, toDateTime64(create_dttm, 0)) AS quantity_units,
+        argMax(source_of_financing, toDateTime64(create_dttm, 0)) AS source_of_financing,
+        argMax(data_update_date, toDateTime64(create_dttm, 0)) AS data_update_date,
+        argMax(type_report, toDateTime64(create_dttm, 0)) AS type_report,
+        argMax(date_to, toDateTime64(create_dttm, 0)) AS date_to,
+        argMax(uuid_report, toDateTime64(create_dttm, 0)) AS uuid_report,
+
+        -- технические поля
+        argMax(deleted_flag, toDateTime64(create_dttm, 0)) AS deleted_flag,
+        max(toDateTime64(create_dttm, 0)) AS create_dttm_max
+
+    FROM stg.mart_mdlp_general_report_on_movement
+    WHERE toDateTime64(create_dttm, 0) <= {p_processed_dttm_user:DateTime}
+    GROUP BY gtin, tin_to_the_issuer, mnn, the_date_of_the_operation
+    HAVING deleted_flag = false
+) t1;
+
+
+CREATE VIEW IF NOT EXISTS stg.v_iv_mart_mdlp_general_report_on_movement AS
+SELECT t1.* EXCEPT (create_dttm_max), create_dttm_max AS create_dttm
+FROM (
+    SELECT
+		the_date_of_the_operation,
+        tin_to_the_issuer,
+		mnn,
+		gtin,
+
+        argMax(the_name_of_the_issuer, toDateTime64(create_dttm, 0)) AS the_name_of_the_issuer,
+        argMax(trade_name, toDateTime64(create_dttm, 0)) AS trade_name,
+        argMax(series, toDateTime64(create_dttm, 0)) AS series,
+        argMax(operation_number, toDateTime64(create_dttm, 0)) AS operation_number,
+        argMax(tin_of_the_sender, toDateTime64(create_dttm, 0)) AS tin_of_the_sender,
+        argMax(name_of_the_sender, toDateTime64(create_dttm, 0)) AS name_of_the_sender,
+        argMax(identifier_md_of_the_sender, toDateTime64(create_dttm, 0)) AS identifier_md_of_the_sender,
+        argMax(tin_of_the_recipient, toDateTime64(create_dttm, 0)) AS tin_of_the_recipient,
+        argMax(name_of_the_recipient, toDateTime64(create_dttm, 0)) AS name_of_the_recipient,
+        argMax(identifier_md_of_the_recipient, toDateTime64(create_dttm, 0)) AS identifier_md_of_the_recipient,
+        argMax(quantity_units, toDateTime64(create_dttm, 0)) AS quantity_units,
+        argMax(source_of_financing, toDateTime64(create_dttm, 0)) AS source_of_financing,
+        argMax(data_update_date, toDateTime64(create_dttm, 0)) AS data_update_date,
+        argMax(type_report, toDateTime64(create_dttm, 0)) AS type_report,
+        argMax(date_to, toDateTime64(create_dttm, 0)) AS date_to,
+        argMax(uuid_report, toDateTime64(create_dttm, 0)) AS uuid_report,
+
+        -- технические поля
+        argMax(deleted_flag, toDateTime64(create_dttm, 0)) AS deleted_flag,
+        max(toDateTime64(create_dttm, 0)) AS create_dttm_max
+
+    FROM stg.mart_mdlp_general_report_on_movement
+    WHERE toDateTime64(create_dttm, 0) BETWEEN {p_from_dttm:DateTime} AND {p_to_dttm:DateTime}
+    GROUP BY gtin, tin_to_the_issuer, mnn, the_date_of_the_operation
+    HAVING deleted_flag = false
+) t1;

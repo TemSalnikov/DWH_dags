@@ -218,7 +218,7 @@ def wf_app_dsm_stg_dds_product():
                 toDateTime('1990-01-01 00:01:01') as effective_from_dttm,
                 toDateTime('2999-12-31 23:59:59') as effective_to_dttm
             FROM {tmp_table} t
-            JOIN {hub_table} h 
+            JOIN dds.v_sn_{hub_table[4:]} h 
                 ON t.{src_pk} = h.{hub_id} AND t.src = h.src AND h.effective_from_dttm <= t.effective_dttm
                 AND h.effective_to_dttm > t.effective_dttm
             """
