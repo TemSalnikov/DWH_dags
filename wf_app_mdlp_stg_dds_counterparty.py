@@ -107,26 +107,21 @@ def wf_app_mdlp_stg_dds_counterparty():
                 the_subject_of_the_russian_federation as the_subject_name,
                 settlement as settlement_name,
                 district as district_name,
-                trim(replaceRegexpAll(
-                        replaceRegexpAll(
-                            replaceRegexpAll(address, '\\d{6}', ''),
-                            ',\\s*,', 
-                            ','
-                        ),
-                        '\\s+', ' ' )
-                    ) as address_name,
+                trim(BOTH ', ' FROM 
+				        if(
+				            match(address, '^[0-9]{6}'),
+				            -- Если индекс в начале
+				            replaceRegexpOne(address, '^[0-9]{6},?\\s*', ''),
+				            -- Если индекс в конце  
+				            replaceRegexpOne(address, ',\\s*[0-9]{6}$', '')
+				        )
+				    )
+                 as address_name,
                 identifier_md_participant as md_system_code,
                 'MDLP' as src,
                 toDateTime('1990-01-01 00:01:01') as effective_dttm,
                 1 as algorithm_type,
-                concat(toString(tin_of_the_participant), '^^', trim(replaceRegexpAll(
-                                                                        replaceRegexpAll(
-                                                                            replaceRegexpAll(address, '\\d{6}', ''),
-                                                                            ',\\s*,', 
-                                                                            ','
-                                                                        ),
-                                                                        '\\s+', ' ' )
-                                                                    )) as salepoint_business_key
+                concat(toString(tin_of_the_participant), '^^', address_name) as salepoint_business_key
             FROM stg.v_iv_mart_mdlp_general_report_on_disposal(p_from_dttm = '{p_version_prev}', p_to_dttm = '{p_version_new}')
             """
             
@@ -165,12 +160,12 @@ def wf_app_mdlp_stg_dds_counterparty():
             SELECT 
                 tin_to_the_issuer as inn_code,
                 the_name_of_the_issuer as counterparty_name,
-                NULL as the_subject_code,
-                NULL as the_subject_name,
-                NULL as settlement_name,
-                NULL as district_name,
+                '' as the_subject_code,
+                '' as the_subject_name,
+                '' as settlement_name,
+                '' as district_name,
                 'DEFAULT_SALEPOINT' as address_name,
-                NULL as md_system_code,
+                '' as md_system_code,
                 'MDLP' as src,
                 toDateTime('1990-01-01 00:01:01') as effective_dttm,
                 2 as algorithm_type,
@@ -213,12 +208,12 @@ def wf_app_mdlp_stg_dds_counterparty():
             SELECT 
                 tin_to_the_issuer as inn_code,
                 the_name_of_the_issuer as counterparty_name,
-                NULL as the_subject_code,
-                NULL as the_subject_name,
-                NULL as settlement_name,
-                NULL as district_name,
+                '' as the_subject_code,
+                '' as the_subject_name,
+                '' as settlement_name,
+                '' as district_name,
                 'DEFAULT_SALEPOINT' as address_name,
-                NULL as md_system_code,
+                '' as md_system_code,
                 'MDLP' as src,
                 toDateTime('1990-01-01 00:01:01') as effective_dttm,
                 3 as algorithm_type,
@@ -263,10 +258,10 @@ def wf_app_mdlp_stg_dds_counterparty():
                 name_of_the_participant as counterparty_name,
                 code_of_the_subject_of_the_russian_federation as the_subject_code,
                 the_subject_of_the_russian_federation as the_subject_name,
-                NULL as settlement_name,
-                NULL as district_name,
+                '' as settlement_name,
+                '' as district_name,
                 'DEFAULT_SALEPOINT' as address_name,
-                NULL as md_system_code,
+                '' as md_system_code,
                 'MDLP' as src,
                 toDateTime('1990-01-01 00:01:01') as effective_dttm,
                 4 as algorithm_type,
@@ -309,12 +304,12 @@ def wf_app_mdlp_stg_dds_counterparty():
             SELECT 
                 tin_to_the_issuer as inn_code,
                 the_name_of_the_issuer as counterparty_name,
-                NULL as the_subject_code,
-                NULL as the_subject_name,
-                NULL as settlement_name,
-                NULL as district_name,
+                '' as the_subject_code,
+                '' as the_subject_name,
+                '' as settlement_name,
+                '' as district_name,
                 'DEFAULT_SALEPOINT' as address_name,
-                NULL as md_system_code,
+                '' as md_system_code,
                 'MDLP' as src,
                 toDateTime('1990-01-01 00:01:01') as effective_dttm,
                 5 as algorithm_type,
@@ -356,11 +351,11 @@ def wf_app_mdlp_stg_dds_counterparty():
             AS 
             SELECT 
                 tin_of_the_sender as inn_code,
-                NULL as counterparty_name,
-                NULL as the_subject_code,
-                NULL as the_subject_name,
-                NULL as settlement_name,
-                NULL as district_name,
+                '' as counterparty_name,
+                '' as the_subject_code,
+                '' as the_subject_name,
+                '' as settlement_name,
+                '' as district_name,
                 'DEFAULT_SALEPOINT' as address_name,
                 identifier_md_of_the_sender as md_system_code,
                 'MDLP' as src,
@@ -405,10 +400,10 @@ def wf_app_mdlp_stg_dds_counterparty():
             SELECT 
                 tin_of_the_recipient as inn_code,
                 name_of_the_recipient as counterparty_name,
-                NULL as the_subject_code,
-                NULL as the_subject_name,
-                NULL as settlement_name,
-                NULL as district_name,
+                '' as the_subject_code,
+                '' as the_subject_name,
+                '' as settlement_name,
+                '' as district_name,
                 'DEFAULT_SALEPOINT' as address_name,
                 identifier_md_of_the_recipient as md_system_code,
                 'MDLP' as src,
@@ -508,12 +503,12 @@ def wf_app_mdlp_stg_dds_counterparty():
                 toDateTime('1990-01-01 00:01:01') as effective_from_dttm,
                 toDateTime('2999-12-31 23:59:59') as effective_to_dttm
             FROM {inc_table} t
-            LEFT JOIN {counterparty_hub_table} hc 
+            LEFT JOIN dds.v_sn_{counterparty_hub_table[4:]} hc 
                 ON t.inn_code = hc.counterparty_id 
                 AND t.src = hc.src 
                 AND hc.effective_from_dttm <= t.effective_dttm
                 AND hc.effective_to_dttm > t.effective_dttm
-            LEFT JOIN {salepoint_hub_table} hs 
+            LEFT JOIN dds.v_sn_{salepoint_hub_table[4:]} hs 
                 ON ngramDistanceUTF8(t.salepoint_business_key, hs.counterparty_salepoint_id) <= {threshold}
                 AND t.src = hs.src 
                 AND hs.effective_from_dttm <= t.effective_dttm
@@ -557,7 +552,7 @@ def wf_app_mdlp_stg_dds_counterparty():
         hub_counterparty_table,
         union_table_task,
         'inn_code',
-        'counterparty_pk',
+        'counterparty_uuid',
         'counterparty_id'
     )
     
@@ -566,7 +561,7 @@ def wf_app_mdlp_stg_dds_counterparty():
         hub_salepoint_table,
         union_table_task,
         'salepoint_business_key',
-        'counterparty_salepoint_pk',
+        'counterparty_salepoint_uuid',
         'counterparty_salepoint_id'
     )
     

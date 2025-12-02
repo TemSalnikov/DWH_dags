@@ -69,3 +69,114 @@ engine = ReplacingMergeTree()
 order by (uuid_report, gtin, tin_to_the_issuer, tin_of_the_participant, deleted_flag)
 
 select * from cluster('cluster_2S_2R', 'stg', 'mart_mdlp_general_pricing_report')
+
+
+CREATE VIEW stg.v_sn_mart_mdlp_general_pricing_report AS
+SELECT t1.* EXCEPT (create_dttm_max), create_dttm_max AS create_dttm
+FROM (
+    SELECT
+        tin_to_the_issuer,
+        mnn,
+        gtin,
+        tin_of_the_participant,
+        
+        argMax(the_name_of_the_issuer, toDateTime64(create_dttm, 0)) AS the_name_of_the_issuer,
+        argMax(code_of_the_subject_of_the_russian_federation, toDateTime64(create_dttm, 0)) AS code_of_the_subject_of_the_russian_federation,
+        argMax(the_subject_of_the_russian_federation, toDateTime64(create_dttm, 0)) AS the_subject_of_the_russian_federation,
+        argMax(name_of_the_participant, toDateTime64(create_dttm, 0)) AS name_of_the_participant,
+        argMax(trade_name, toDateTime64(create_dttm, 0)) AS trade_name,
+        argMax(the_number_of_points_of_sales, toDateTime64(create_dttm, 0)) AS the_number_of_points_of_sales,
+        argMax(sales_volume_units, toDateTime64(create_dttm, 0)) AS sales_volume_units,
+        argMax(meduvented_price_rub, toDateTime64(create_dttm, 0)) AS meduvented_price_rub,
+        argMax(source_of_financing, toDateTime64(create_dttm, 0)) AS source_of_financing,
+        argMax(data_update_date, toDateTime64(create_dttm, 0)) AS data_update_date,
+        argMax(type_report, toDateTime64(create_dttm, 0)) AS type_report,
+        argMax(date_to, toDateTime64(create_dttm, 0)) AS date_to,
+        argMax(uuid_report, toDateTime64(create_dttm, 0)) AS uuid_report,
+
+        argMax(deleted_flag, toDateTime64(create_dttm, 0)) AS deleted_flag,
+        max(toDateTime64(create_dttm, 0)) AS create_dttm_max
+
+    FROM stg.mart_mdlp_general_pricing_report
+    WHERE toDateTime64(create_dttm, 0)
+          BETWEEN {p_from_dttm:DateTime} AND {p_to_dttm:DateTime}
+    GROUP BY tin_to_the_issuer,
+        mnn,
+        gtin,
+        tin_of_the_participant
+    HAVING deleted_flag = false
+) t1;
+
+
+CREATE VIEW stg.v_sv_mart_mdlp_general_pricing_report AS
+SELECT t1.* EXCEPT (create_dttm_max), create_dttm_max AS create_dttm
+FROM (
+    SELECT
+        tin_to_the_issuer,
+        mnn,
+        gtin,
+        tin_of_the_participant,
+
+        argMax(the_name_of_the_issuer, toDateTime64(create_dttm, 0)) AS the_name_of_the_issuer,
+        argMax(code_of_the_subject_of_the_russian_federation, toDateTime64(create_dttm, 0)) AS code_of_the_subject_of_the_russian_federation,
+        argMax(the_subject_of_the_russian_federation, toDateTime64(create_dttm, 0)) AS the_subject_of_the_russian_federation,
+        argMax(name_of_the_participant, toDateTime64(create_dttm, 0)) AS name_of_the_participant,
+        argMax(trade_name, toDateTime64(create_dttm, 0)) AS trade_name,
+        argMax(the_number_of_points_of_sales, toDateTime64(create_dttm, 0)) AS the_number_of_points_of_sales,
+        argMax(sales_volume_units, toDateTime64(create_dttm, 0)) AS sales_volume_units,
+        argMax(meduvented_price_rub, toDateTime64(create_dttm, 0)) AS meduvented_price_rub,
+        argMax(source_of_financing, toDateTime64(create_dttm, 0)) AS source_of_financing,
+        argMax(data_update_date, toDateTime64(create_dttm, 0)) AS data_update_date,
+        argMax(type_report, toDateTime64(create_dttm, 0)) AS type_report,
+        argMax(date_to, toDateTime64(create_dttm, 0)) AS date_to,
+        argMax(uuid_report, toDateTime64(create_dttm, 0)) AS uuid_report,
+
+        argMax(deleted_flag, toDateTime64(create_dttm, 0)) AS deleted_flag,
+        max(toDateTime64(create_dttm, 0)) AS create_dttm_max
+
+    FROM stg.mart_mdlp_general_pricing_report
+    WHERE toDateTime64(create_dttm, 0) <= {p_processed_dttm_user:DateTime}
+    GROUP BY tin_to_the_issuer,
+        mnn,
+        gtin,
+        tin_of_the_participant
+    HAVING deleted_flag = false
+) t1;
+
+
+CREATE VIEW stg.v_iv_mart_mdlp_general_pricing_report AS
+SELECT t1.* EXCEPT (create_dttm_max), create_dttm_max AS create_dttm
+FROM (
+    SELECT
+        tin_to_the_issuer,
+        mnn,
+        gtin,
+        tin_of_the_participant,
+
+        argMax(the_name_of_the_issuer, toDateTime64(create_dttm, 0)) AS the_name_of_the_issuer,
+        argMax(code_of_the_subject_of_the_russian_federation, toDateTime64(create_dttm, 0)) AS code_of_the_subject_of_the_russian_federation,
+        argMax(the_subject_of_the_russian_federation, toDateTime64(create_dttm, 0)) AS the_subject_of_the_russian_federation,
+        argMax(name_of_the_participant, toDateTime64(create_dttm, 0)) AS name_of_the_participant,
+        argMax(trade_name, toDateTime64(create_dttm, 0)) AS trade_name,
+        argMax(the_number_of_points_of_sales, toDateTime64(create_dttm, 0)) AS the_number_of_points_of_sales,
+        argMax(sales_volume_units, toDateTime64(create_dttm, 0)) AS sales_volume_units,
+        argMax(meduvented_price_rub, toDateTime64(create_dttm, 0)) AS meduvented_price_rub,
+        argMax(source_of_financing, toDateTime64(create_dttm, 0)) AS source_of_financing,
+        argMax(data_update_date, toDateTime64(create_dttm, 0)) AS data_update_date,
+        argMax(type_report, toDateTime64(create_dttm, 0)) AS type_report,
+        argMax(date_to, toDateTime64(create_dttm, 0)) AS date_to,
+        argMax(uuid_report, toDateTime64(create_dttm, 0)) AS uuid_report,
+
+        argMax(deleted_flag, toDateTime64(create_dttm, 0)) AS deleted_flag,
+        max(toDateTime64(create_dttm, 0)) AS create_dttm_max
+
+    FROM stg.mart_mdlp_general_pricing_report
+    WHERE toDateTime64(create_dttm, 0)
+          BETWEEN {p_from_dttm:DateTime} AND {p_to_dttm:DateTime}
+    GROUP BY tin_to_the_issuer,
+        mnn,
+        gtin,
+        tin_of_the_participant
+    HAVING deleted_flag = false
+) t1;
+

@@ -68,81 +68,72 @@ default_args = {
     'max_retry_delay': timedelta(minutes=30),
 }
 
+logger = LoggingMixin().log
+
 @dag(
-    dag_id='extract_dsm',
-    schedule_interval='0 9 6 * *', # в 9 утра каждого месяца 6 числа
+    dag_id='wf_dsm_mart_dsm_region',
+    # schedule_interval='0 9 6 * *', # в 9 утра каждого месяца 6 числа
     start_date=days_ago(1),
     default_args=default_args,
     catchup=False,
-    params={
-        'dates_from': Param(
-            (datetime.now() - timedelta(days=1)).replace(day=1).strftime("%Y-%m-%d"),
-            type='string',
-            description='Дата начала отчетного периода в формате YYYY-MM-01. Указывать тот месяц, за который требуется отчет. Если требуется прогрузка за 1 месяц, поле "dates_to" оставить пустым.'
-        ),
-        'dates_to': Param(
-            '-',
-            type='string',
-            description='Дата окончания отчетного периода в формате YYYY-MM-01.'
-        )
-    },
+    # params={
+        # 'dates_from': Param(
+        #     (datetime.now() - timedelta(days=1)).replace(day=1).strftime("%Y-%m-%d"),
+        #     type='string',
+        #     description='Дата начала отчетного периода в формате YYYY-MM-01. Указывать тот месяц, за который требуется отчет. Если требуется прогрузка за 1 месяц, поле "dates_to" оставить пустым.'
+        # ),
+        # 'dates_to': Param(
+        #     '-',
+        #     type='string',
+        #     description='Дата окончания отчетного периода в формате YYYY-MM-01.'
+        # )
+    # },
     tags=['oracle', 'clickhouse', 'data_migration']
 )
-def extract_dsm():
+def wf_dsm_mart_dsm_region():
+    tgt_table_name = 'mart_dsm_region'
     @task
     def load_altay_reg():
         """Загрузка новых данных из V$ALTAY_REG """
 
-        message = 'Нет новых данных для загрузки в mart_dsm_region'
+        message = f'Нет новых данных для загрузки в {tgt_table_name}'
 
         oracle_query = f"""SELECT distinct * from DATA_MART."V$ALTAY_REG" """
 
         try:
             with get_oracle_connection() as oracle_conn:
                 df_oracle = pd.read_sql(oracle_query, oracle_conn)
-                
+                logger.info(f"Выполнен запрос: {oracle_query}")
+                logger.info(f"Запрос к источнику выполнен, получено данных: {df_oracle.size}, получено строк: {df_oracle.shape[0]}")
+
                 # 1. Проверка наличия данных в БД Oracle
                 if df_oracle.empty:
-                    print(message)
+                    logger.info(message)
 
                 else:
                     # 2. Проверка наличия новых данных в БД Oracle
                     # преобразования наименований столбцов, т.к. в Oracle указаны в верхнем регистре, в ClickHouse - в нижнем
                     df_oracle.columns = [col.lower() for col in df_oracle.columns]
+                    hash_cols = ['cd_reg', 'sales_type_id']
 
-                    ch_client = get_clickhouse_client()
-                    df_click = pd.DataFrame(ch_client.execute(f"""select cd_reg, sales_type_id from stg.mart_dsm_region"""), columns=['cd_reg', 'sales_type_id'])
-
-                    # выбор строк в Oracle, кот. отсутствую в ClickHouse
-                    existing_rows_ch = set(zip(df_click['cd_reg'], df_click['sales_type_id']))
-                    diff_rows = df_oracle.apply(lambda row: (row['cd_reg'], row['sales_type_id']) not in existing_rows_ch, axis=1)
-                    df_insert_del_rows = df_oracle.loc[diff_rows]
-
-                    if len(df_insert_del_rows) == 0:
-                        print(message)
-
-                    else:
-                        # 3. Вставка данных в clickhouse 
-                        ch_table_structure = ch_client.execute('DESCRIBE TABLE mart_dsm_region')
-                        ch_columns = [row[0] for row in ch_table_structure]
-                        
-                        #hash_cols = ['cd_reg', 'sales_type_id']
-
-                        df_for_insert = df_insert_del_rows.assign(
+                    df_for_insert = df_oracle.assign(
                                                             processed_dttm=pd.Timestamp.now().normalize(), 
-                                                            deleted_flag=0
-                                                            #hash_diff=lambda df: df.apply(compute_row_hash, columns=hash_cols, axis=1)  # Хеш для выбранных столбцов
-                                                        )  # добавляем столбцы processed_dttm и deleted_flag
-
-                        ch_client.insert_dataframe('INSERT INTO mart_dsm_region VALUES', df_for_insert, settings=dict(use_numpy=True))
-                        
-                        ch_client.disconnect()
-                        print(f"Успешно загружено {len(df_for_insert)} записей в mart_dsm_region")
-                
+                                                            deleted_flag=0,
+                                                            hash_diff=lambda df: df.apply(compute_row_hash, columns=hash_cols, axis=1)  # Хеш для выбранных столбцов
+                                                        )
+                    logger.info(f"Запрос подготовки технических полей выполнен, получено данных: {df_for_insert.size}, строк: {df_for_insert.shape[0]}")
+                    
+                    # 5.2. Вставка дельты
+                    ch_client = get_clickhouse_client()
+                    ch_client.insert_dataframe(f"INSERT INTO {tgt_table_name} VALUES", df_for_insert, settings=dict(use_numpy=True))
+                    logger.info(f"Прогружены данные в таблицу {tgt_table_name}")
+    
+                    ch_client.disconnect()
+                    logger.info(f"Успешно загружено {len(df_for_insert)} записей в {tgt_table_name}")
         except Exception as e:
-            print(f"Ошибка при загрузке mart_dsm_region: {str(e)}")
+            logger.info(f"Ошибка при загрузке mart_dsm_region: {str(e)}")
             raise
 
     load_altay_reg()
 
-extract_dsm()
+wf_dsm_mart_dsm_region()

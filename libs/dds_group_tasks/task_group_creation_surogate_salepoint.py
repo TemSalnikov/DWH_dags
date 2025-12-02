@@ -144,7 +144,7 @@ def hub_load_processing_tasks(hub_name: str, source_table: str, src_pk:str,  hub
                 t.src,
                 t.effective_dttm
             FROM {tmp_table} t
-            LEFT JOIN {hub_table} h 
+            LEFT JOIN dds.v_sn_{hub_table[4:]} h 
                 ON t.{src_pk} = h.{hub_id} AND t.src = h.src AND h.effective_from_dttm <= t.effective_dttm
                 AND h.effective_to_dttm >= t.effective_dttm
             WHERE h.{hub_pk} = ''
@@ -176,6 +176,8 @@ def hub_load_processing_tasks(hub_name: str, source_table: str, src_pk:str,  hub
             if client:
                 client.disconnect()
                 logger.debug("Подключение к ClickHouse закрыто")
+    
+
     @task
     def get_hub_rows_dlt(tmp_table: str, hub_table: str) -> str:
         """Сравнение данных с хаб-таблицей"""
@@ -194,30 +196,32 @@ def hub_load_processing_tasks(hub_name: str, source_table: str, src_pk:str,  hub
             query_not_in_hub = f"""
             CREATE TABLE {dlt_rws_table} 
             ENGINE = MergeTree()
-            PRIMARY KEY ({src_pk})
-            ORDER BY ({src_pk})
+            PRIMARY KEY ({hub_id})
+            ORDER BY ({hub_id})
             AS
             SELECT  
                 h.{hub_pk},
                 t.{src_pk} as {hub_id},
                 t.src,
-                h.effective_from_dttm as effective_dttm,
-                deleted_flg = False
+                t.effective_dttm,
+                False as deleted_flg
             FROM {tmp_table} t
-            LEFT JOIN {hub_table} h 
-                ON splitByChar('^^',t.{src_pk})[0] = splitByChar('^^',h.{hub_id})[0] AND splitByChar('^^',h.{hub_id})[1] = 'DEFAULT_SALEPOINT'  AND t.src = h.src AND h.effective_from_dttm <= t.effective_dttm
-                AND h.effective_to_dttm >= t.effective_dttm
+            INNER JOIN {hub_table} h 
+                ON arrayElement(splitByString('^^',t.{src_pk}),1) = arrayElement(splitByString('^^',h.{hub_id}),1) AND arrayElement(splitByString('^^',t.{src_pk}),2) != 'DEFAULT_SALEPOINT'
+                AND arrayElement(splitByString('^^',h.{hub_id}),2) = 'DEFAULT_SALEPOINT'
+                AND t.src = h.src
             UNION DISTINCT
             SELECT  
                 h.{hub_pk},
                 h.{hub_id},
-                t.src,
-                t.effective_dttm,
-                deleted_flg = True
+                h.src,
+                h.effective_from_dttm as effective_dttm,
+                True as deleted_flg
             FROM {tmp_table} t
-            LEFT JOIN {hub_table} h 
-                ON splitByChar('^^',t.{src_pk})[0] = splitByChar('^^',h.{hub_id})[0] AND splitByChar('^^',h.{hub_id})[1] = 'DEFAULT_SALEPOINT'  AND t.src = h.src AND h.effective_from_dttm <= t.effective_dttm
-                AND h.effective_to_dttm >= t.effective_dttm
+            INNER JOIN {hub_table} h 
+                ON arrayElement(splitByString('^^',t.{src_pk}),1) = arrayElement(splitByString('^^',h.{hub_id}),1) AND arrayElement(splitByString('^^',t.{src_pk}),2) != 'DEFAULT_SALEPOINT'
+                AND arrayElement(splitByString('^^',h.{hub_id}),2) = 'DEFAULT_SALEPOINT'
+                AND t.src = h.src
             """
             logger.info(f"Создан запрос: {query_not_in_hub}")
 
@@ -240,6 +244,7 @@ def hub_load_processing_tasks(hub_name: str, source_table: str, src_pk:str,  hub
                 client.disconnect()
                 logger.debug("Подключение к ClickHouse закрыто")
     
+
     @task
     def get_rws_without_uid(tmp_table_without_uid: str, tmp_table_with_uid: str, threshold: float = 0.35) -> str:
         """Сравнение данных с хаб-таблицей"""
@@ -365,12 +370,20 @@ def hub_load_processing_tasks(hub_name: str, source_table: str, src_pk:str,  hub
             ORDER BY ({src_pk})
             AS
             SELECT  
-                *
-            FROM {tmp_table_dlt} t
+                {hub_pk},
+                {hub_id},
+                src,
+                effective_dttm,
+                deleted_flg
+            FROM {tmp_table_dlt} t1
             UNION DISTINCT
             SELECT  
-                *
-            FROM {tbl_new_uid} t
+                {hub_pk},
+                {hub_id},
+                src,
+                effective_dttm,
+                deleted_flg
+            FROM {tbl_new_uid} t2
             """
             logger.info(f"Создан запрос: {query_not_in_hub}")
 
