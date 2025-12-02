@@ -183,7 +183,8 @@ def wf_dsm_mart_dsm_sale_product():
                             )
                             ENGINE = MergeTree()
                             order by (cd_u)
-                        """               
+                        """  
+                        logger.info(f"Сформирован запрос: \n {create_tbl_query}")             
                         ch_client.execute(create_tbl_query)
 
                         # 5.2. Вставка дельты
