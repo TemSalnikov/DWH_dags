@@ -182,7 +182,6 @@ def hub_load_processing_tasks(hub_name: str, source_table: str, src_pk:str,  hub
     def get_hub_rows_dlt(tmp_table: str, hub_table: str) -> str:
         """Сравнение данных с хаб-таблицей"""
         client = None
-        in_hub_table = f"tmp.tmp_id_inhub_{uuid.uuid4().hex}"
         dlt_rws_table = f"tmp.tmp_id_dlt_rws_{uuid.uuid4().hex}"
         logger = LoggingMixin().log
         try:
@@ -200,7 +199,7 @@ def hub_load_processing_tasks(hub_name: str, source_table: str, src_pk:str,  hub
             ORDER BY ({hub_id})
             AS
             SELECT  
-                h.{hub_pk},
+                h.{hub_pk} as {hub_pk},
                 t.{src_pk} as {hub_id},
                 t.src,
                 t.effective_dttm,
@@ -212,7 +211,7 @@ def hub_load_processing_tasks(hub_name: str, source_table: str, src_pk:str,  hub
                 AND t.src = h.src
             UNION DISTINCT
             SELECT  
-                h.{hub_pk},
+                h.{hub_pk} as {hub_pk},
                 h.{hub_id},
                 h.src,
                 h.effective_from_dttm as effective_dttm,
