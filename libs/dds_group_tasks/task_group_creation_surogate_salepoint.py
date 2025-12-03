@@ -367,8 +367,8 @@ def hub_load_processing_tasks(hub_name: str, source_table: str, src_pk:str,  hub
             query_not_in_hub = f"""
             CREATE TABLE {union_table} 
             ENGINE = MergeTree()
-            PRIMARY KEY ({src_pk})
-            ORDER BY ({src_pk})
+            PRIMARY KEY ({hub_pk})
+            ORDER BY ({hub_pk})
             AS
             SELECT  
                 {hub_pk},
