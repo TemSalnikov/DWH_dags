@@ -22,7 +22,6 @@ def extract_custom(path='', name_report='Закупки', name_pharm_chain='Ви
         end_date = datetime.strptime(end_date_str.strip(), "%d.%m.%Y")
         loger.info(f"Определен период отчета: {start_date.date()} - {end_date.date()}")
 
-        # --- Поиск заголовков ---
         header_row_index = -1
         for i, row in df_raw.iterrows():
             if '№п.п' in row.astype(str).values:
@@ -39,7 +38,6 @@ def extract_custom(path='', name_report='Закупки', name_pharm_chain='Ви
         df.reset_index(drop=True, inplace=True)
         loger.info(f'Успешно получено {len(df)} строк!')
 
-        # --- Переименование колонок ---
         rename_map = {
             '№п.п': 'row_number',
             'Код': 'product_code',
@@ -52,16 +50,13 @@ def extract_custom(path='', name_report='Закупки', name_pharm_chain='Ви
         }
         df.rename(columns=rename_map, inplace=True)
 
-        # --- Добавление технических полей ---
         df_report = df.copy()
 
-        # Добавляем недостающие колонки, чтобы структура соответствовала отчету по продажам
         df_report['address'] = None
         df_report['group_abc'] = None
         df_report['group_xyz'] = None
         df_report['group_abc_lower'] = None
 
-        # Удаляем колонку, специфичную только для закупок
         df_report.drop(columns=['row_number'], inplace=True)
 
         df_report['uuid_report'] = [str(uuid.uuid4()) for _ in range(len(df_report))]
@@ -98,7 +93,6 @@ def _extract_sales_or_remains(path='', name_report='Продажи', name_pharm_
     try:
         loger.info(f"Начинаем парсинг отчета '{name_report}' для '{name_pharm_chain}' из файла: {path}")
 
-        # --- Извлечение периода из имени файла ---
         filename = os.path.basename(path)
         date_part = os.path.splitext(filename)[0]
         file_month_date = datetime.strptime(date_part, "%m_%Y")
@@ -107,14 +101,11 @@ def _extract_sales_or_remains(path='', name_report='Продажи', name_pharm_
         end_date = file_month_date.replace(day=last_day)
         loger.info(f"Определен период отчета по имени файла: {start_date.date()} - {end_date.date()}")
 
-        # Читаем данные, пропуская первую строку с общей статистикой
         df = pd.read_excel(path, header=1, dtype=str)
         
-        # Удаляем последний столбец "Общий итог"
         if 'итог' in str(df.columns[-1]).lower():
             df.drop(df.columns[-1], axis=1, inplace=True)
 
-        # Удаляем пустые строки в конце и последнюю строку с итогами
         df.dropna(how='all', inplace=True)
         if not df.empty:
             df.drop(df.tail(1).index, inplace=True)
@@ -122,7 +113,6 @@ def _extract_sales_or_remains(path='', name_report='Продажи', name_pharm_
         # Преобразуем "широкую" таблицу в "длинную"
         id_vars = ['Код', 'Наименование', 'Производитель'] # Колонки-идентификаторы
         
-        # Определяем колонки с адресами (для "плавления") и колонки с группами (для сохранения)
         address_vars = []
         group_vars = []
         for col in df.columns:
@@ -134,7 +124,6 @@ def _extract_sales_or_remains(path='', name_report='Продажи', name_pharm_
         
         df_melted = df.melt(id_vars=id_vars + group_vars, value_vars=address_vars, var_name='address', value_name='quantity')
 
-        # Очистка данных: удаляем строки с пустым количеством или значением "0"
         df_melted.dropna(subset=['quantity'], inplace=True)
         df_melted = df_melted[df_melted['quantity'] != '0'].copy()
 
@@ -146,7 +135,6 @@ def _extract_sales_or_remains(path='', name_report='Продажи', name_pharm_
             'Код': 'product_code',
             'Наименование': 'product_name',
             'Производитель': 'manufacturer',
-            # Также переименовываем колонки с группами
             'Группа|ABC': 'group_abc',
             'Группа|XYZ': 'group_xyz',
             'Группа|abc': 'group_abc_lower' # на случай если есть оба варианта
@@ -154,7 +142,6 @@ def _extract_sales_or_remains(path='', name_report='Продажи', name_pharm_
         actual_rename_map = {k: v for k, v in rename_map.items() if k in df_melted.columns}
         df_melted.rename(columns=actual_rename_map, inplace=True)
         
-        # Убедимся, что все колонки с группами существуют, даже если их не было в файле
         expected_group_cols = ['group_abc', 'group_xyz', 'group_abc_lower']
         for col in expected_group_cols:
             if col not in df_melted.columns:
@@ -167,12 +154,10 @@ def _extract_sales_or_remains(path='', name_report='Продажи', name_pharm_
         df_melted['end_date'] = end_date.strftime('%Y-%m-%d %H:%M:%S')
         df_melted['processed_dttm'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-        # Добавляем недостающие колонки из отчета по закупкам
         df_melted['supplier'] = None
         df_melted['receipt_date'] = None
         df_melted['invoice_number'] = None
 
-        # Финальный набор колонок для унификации
         final_columns = [
             'uuid_report', 'product_code', 'product_name', 'manufacturer', 'supplier', 'receipt_date',
             'invoice_number', 'quantity', 'address', 'group_abc', 'group_xyz', 'group_abc_lower',
