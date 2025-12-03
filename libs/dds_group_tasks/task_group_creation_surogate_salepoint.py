@@ -267,15 +267,16 @@ def hub_load_processing_tasks(hub_name: str, source_table: str, src_pk:str,  hub
             ORDER BY ({src_pk})
             AS
             SELECT DISTINCT 
-                
                 t.{src_pk},
                 t.src,
                 t.effective_dttm,
-                deleted_flg = False
+                False as deleted_flg
             FROM {tmp_table_without_uid} t
             LEFT JOIN {tmp_table_with_uid} h 
-                ON ngramDistanceUTF8(t.{src_pk}), h.{hub_id}) <= {threshold}
-            WHERE h.{hub_pk} = ''
+                ON arrayElement(splitByString('^^',t.{src_pk}),1) = arrayElement(splitByString('^^',h.{hub_id}),1) AND arrayElement(splitByString('^^',t.{src_pk}),2) != 'DEFAULT_SALEPOINT'
+                AND arrayElement(splitByString('^^',h.{hub_id}),2) != 'DEFAULT_SALEPOINT'
+                AND t.src = h.src
+            WHERE h.{hub_pk} = '' and ngramDistanceUTF8(t.{src_pk}, h.{hub_id}) > {threshold}
             """
             logger.info(f"Создан запрос: {query_not_in_hub}")
 
