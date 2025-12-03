@@ -329,7 +329,8 @@ def hub_load_processing_tasks(hub_name: str, source_table: str, src_pk:str,  hub
                 '-1' as {hub_pk},
                 {src_pk} as {hub_id},
                 src,
-                effective_dttm
+                effective_dttm,
+                deleted_flg
             FROM {tmp_table}
             WHERE {src_pk} = ''
             """
