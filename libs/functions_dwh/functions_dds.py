@@ -119,7 +119,7 @@ def load_delta(src_table: str, tgt_table:str, pk_list: list, bk_list:list):
                t.{', t.'.join(bk_list)},
                t.effective_from_dttm,
                t.effective_to_dttm,
-               t.src,
+               t.src as src,
                t.hash_diff
             FROM {tgt_table} t
             JOIN {tmp_hash_tbl} h
