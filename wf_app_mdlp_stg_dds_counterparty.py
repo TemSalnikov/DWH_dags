@@ -566,8 +566,8 @@ def wf_app_mdlp_stg_dds_counterparty():
     # Объединение суррогатных ключей из двух хабов
     joined_keys_task = join_surrogate_keys(
         union_table_task, 
-        generate_counterparty_sur_key_task,
-        generate_salepoint_sur_key_task
+        hub_counterparty_table,
+        hub_salepoint_table
     )
     
     # Загрузка данных в целевую таблицу
