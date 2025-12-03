@@ -491,13 +491,13 @@ def wf_app_mdlp_stg_dds_counterparty():
             query = f"""
             CREATE TABLE {tmp_table_name} 
             ENGINE = MergeTree()
-            PRIMARY KEY (inn_code, address_name)
-            ORDER BY (inn_code, address_name)
+            PRIMARY KEY ({name_counterparty_sur_key}, {name_salepoint_sur_key})
+            ORDER BY ({name_counterparty_sur_key}, {name_salepoint_sur_key})
             AS
             SELECT 
                 t.*,
-                hc.counterparty_pk as {name_counterparty_sur_key},
-                hs.counterparty_salepoint_pk as {name_salepoint_sur_key},
+                hc.{name_counterparty_sur_key},
+                hs.{name_salepoint_sur_key},
                 toDateTime('1990-01-01 00:01:01') as effective_from_dttm,
                 toDateTime('2999-12-31 23:59:59') as effective_to_dttm
             FROM {inc_table} t
