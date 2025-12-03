@@ -109,12 +109,10 @@ def wf_app_mdlp_stg_dds_counterparty():
                 district as district_name,
                 trim(BOTH ', ' FROM 
 				        if(
-				            match(address, '^[0-9]{6}'),
-				            -- Если индекс в начале
-				            replaceRegexpOne(address, '^[0-9]{6},?\\s*', ''),
-				            -- Если индекс в конце  
-				            replaceRegexpOne(address, ',\\s*[0-9]{6}$', '')
-				        )
+						        match(address, '^[0-9]{6},'),
+						        trimLeft(substring(address, position(address, ',') + 1)),
+						        address
+						    )
 				    )
                  as address_name,
                 identifier_md_participant as md_system_code,
