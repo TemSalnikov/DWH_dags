@@ -526,6 +526,33 @@ def wf_app_mdlp_stg_dds_counterparty():
             if client:
                 client.disconnect()
                 logger.debug("Подключение к ClickHouse закрыто")
+    @task
+    def cleanup_tmp(tmp_tables: list) -> str:
+        """Объединение суррогатных ключей из двух хабов"""
+        
+        
+        try:
+            logger = LoggingMixin().log
+            client = tg_sur.get_clickhouse_client()
+            logger.info("Подключение к ClickHouse успешно выполнено")
+
+            for tmp in tmp_tables:
+                query = f"""
+                DROP TABLE IF EXIST {tmp}
+                """
+            
+                logger.info(f"Создан запрос для очистки: {query}")
+                client.execute(query)
+
+            
+        except tg_sur.ClickhouseError as e:
+            logger.error(f"Ошибка при очистке: {e}")
+            raise
+        finally:
+            if client:
+                client.disconnect()
+                logger.debug("Подключение к ClickHouse закрыто")
+
 
     # Задачи DAG
     check_task = check_data_availability()
@@ -569,6 +596,9 @@ def wf_app_mdlp_stg_dds_counterparty():
         hub_counterparty_table,
         hub_salepoint_table
     )
+
+    cleanup = cleanup_tmp([algo1_task, algo2_task, algo3_task, algo4_task, algo5_task, algo6_task, algo7_task, union_table_task, generate_counterparty_sur_key_task,
+                           generate_salepoint_sur_key_task, joined_keys_task])
     
     # Загрузка данных в целевую таблицу
     load_delta_task = load_delta(joined_keys_task, tgt_table_name, pk_list_dds, bk_list_dds)
@@ -582,6 +612,6 @@ def wf_app_mdlp_stg_dds_counterparty():
                        algo5_task, algo6_task, algo7_task] >> union_table_task
     
     union_table_task >> [generate_counterparty_sur_key_task, generate_salepoint_sur_key_task] >> joined_keys_task
-    joined_keys_task >> load_delta_task >> save_meta_task
+    joined_keys_task >> load_delta_task >> save_meta_task >> cleanup
 
 wf_app_mdlp_stg_dds_counterparty()
