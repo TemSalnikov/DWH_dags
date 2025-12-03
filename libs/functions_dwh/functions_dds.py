@@ -115,8 +115,8 @@ def load_delta(src_table: str, tgt_table:str, pk_list: list, bk_list:list):
             ORDER BY ({pk_joined})
             AS
             SELECT  
-               t.{pk_joined},
-               t.{bk_joined},
+               t.{', t.'.join(pk_list)},
+               t.{', t.'.join(bk_list)},
                t.effective_from_dttm,
                t.effective_to_dttm,
                t.src,
