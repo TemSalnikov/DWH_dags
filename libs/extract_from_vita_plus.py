@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import uuid
+import calendar
 import pandas as pd
 import os
 from airflow.utils.log.logging_mixin import LoggingMixin
@@ -10,12 +11,40 @@ def extract_custom(path='', name_report='Закупки', name_pharm_chain='Ви
     try:
         loger.info(f"Начинаем парсинг отчета '{name_report}' для '{name_pharm_chain}' из файла: {path}")
 
-        filename = os.path.basename(path)
-        date_part = os.path.splitext(filename)[0]
+        # --- Логика определения start_date и end_date ---
+        current_filename = os.path.basename(path)
+        directory = os.path.dirname(path)
+        date_part = os.path.splitext(current_filename)[0]
+        current_file_date = datetime.strptime(date_part, "%m_%Y")
+
+        # Собираем и сортируем все файлы в директории по дате из имени
+        files_in_dir = []
+        for f in os.listdir(directory):
+            if f.endswith(('.xlsx', '.xls')) and not f.startswith('~'):
+                try:
+                    file_date = datetime.strptime(os.path.splitext(f)[0], "%m_%Y")
+                    files_in_dir.append((file_date, f))
+                except ValueError:
+                    loger.warning(f"Файл '{f}' в директории имеет некорректное имя и будет проигнорирован при расчете периода.")
+        files_in_dir.sort()
+
+        # Находим предыдущий файл
+        previous_month_date = None
+        for i, (file_date, filename) in enumerate(files_in_dir):
+            if filename == current_filename and i > 0:
+                previous_month_date = files_in_dir[i-1][0]
+                break
         
-        start_date = datetime.strptime(date_part, "%m_%Y")
+        if previous_month_date:
+            # start_date - это первый день месяца, следующего за месяцем из previous_month_date
+            start_date = (previous_month_date.replace(day=28) + timedelta(days=4)).replace(day=1)
+        else:
+            # Если предыдущий файл не найден, start_date - это начало месяца текущего файла
+            start_date = current_file_date
         
-        end_date = (start_date.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+        # end_date - это всегда последнее число месяца из имени текущего файла
+        _, last_day = calendar.monthrange(current_file_date.year, current_file_date.month)
+        end_date = current_file_date.replace(day=last_day)
         
         loger.info(f"Определен период отчета по имени файла: {start_date.date()} - {end_date.date()}")
         
@@ -120,24 +149,24 @@ if __name__ == "__main__":
     loger = LoggingMixin().log
     main_loger = LoggingMixin().log
 
-    test_folder_path = r'C:\Users\nmankov\Desktop\отчеты\Вита Плюс\Закупки\2024'
+    test_folder_path = r'C:\Users\nmankov\Desktop\отчеты\Вита Плюс\Продажи\2024'
 
     if os.path.isdir(test_folder_path):
         main_loger.info(f"Запуск локального теста для папки: {test_folder_path}")
         
         for filename in os.listdir(test_folder_path):
-            if filename.endswith(('.xlsx', '.xls')):
+            if filename.endswith(('.xlsx', '.xls')) and not filename.startswith('~'):
                 file_path = os.path.join(test_folder_path, filename)
                 main_loger.info(f"--- Обработка файла: {file_path} ---")
                 
                 try:
-
-                    report_type = 'Закупки' # по умолчанию
+                    report_type = 'Закупки'  # по умолчанию
                     if 'остатки' in file_path.lower():
                         report_type = 'Остатки'
                     elif 'продажи' in file_path.lower():
                         report_type = 'Продажи'
 
+                    # Для локального теста вызываем extract_xls, который не передает previous_month_date
                     result_data = extract_xls(path=file_path, name_report=report_type, name_pharm_chain='Вита плюс')
 
                     for table_name, df in result_data.items():
