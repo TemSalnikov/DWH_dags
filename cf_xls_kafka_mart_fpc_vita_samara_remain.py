@@ -109,7 +109,8 @@ def cf_xls_kafka_mart_fpc_vita_samara_remain():
         from airflow.api.common.trigger_dag import trigger_dag
         if processing_files:
             parametrs['files'] = processing_files
-            _dag_id = context["dag"].get_dag_id()
+            _dag_id = context["dag"] if "dag" in context else ''
+            _dag_id = str(_dag_id).split(':')[1].strip().strip('>')
             loger.info(f'Успешно получено dag_id {_dag_id}!')
             result = trigger_dag(
                 dag_id='wf'+ _dag_id[2:],
