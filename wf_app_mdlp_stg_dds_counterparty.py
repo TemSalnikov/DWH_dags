@@ -603,7 +603,7 @@ def wf_app_mdlp_stg_dds_counterparty():
     
     # Загрузка данных в целевую таблицу
     load_delta_task = load_delta(joined_keys_task, tgt_table_name, pk_list_dds, bk_list_dds)
-    save_meta_task = save_meta(load_delta_task, parameters_task['p_version_new'])
+    save_meta_task = save_meta(load_delta_task, json.dumps(parameters_task['p_version_new']))
     
     # Определение зависимостей
     check_task >> parameters_task
