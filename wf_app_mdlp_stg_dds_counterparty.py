@@ -495,7 +495,8 @@ def wf_app_mdlp_stg_dds_counterparty():
             ORDER BY ({name_counterparty_sur_key}, {name_salepoint_sur_key})
             AS
             SELECT 
-                t.*,
+                t.* EXCEPT (src),
+                t.src as src,
                 hc.{name_counterparty_sur_key},
                 hs.{name_salepoint_sur_key},
                 toDateTime('1990-01-01 00:01:01') as effective_from_dttm,
