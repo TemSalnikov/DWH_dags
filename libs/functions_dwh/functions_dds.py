@@ -302,11 +302,12 @@ def save_meta(processed_dttm: str, stg_processed_dttm: str, **context):
         conn = hook.get_conn()
         cur = conn.cursor()
         
-        
-        cur.execute(f"""
+        query = f"""
             INSERT INTO versions (dag_id, run_id, dds_processed_dttm, loaded_stg_processed_dttm)
             VALUES ('{dag_id}','{run_id}','{processed_dttm}', '{stg_processed_dttm}')
-        """)
+        """
+        logger.info(f"Создан запрос для объединения суррогатных ключей: {query}")
+        cur.execute(query)
         conn.commit()
         return True
     except Exception as e:
