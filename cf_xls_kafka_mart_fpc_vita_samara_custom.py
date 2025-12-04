@@ -30,7 +30,7 @@ default_args = {
     default_args=default_args,
     schedule_interval=None,
     catchup=False,
-    params = {'directory': '/opt/airflow/data/reports/Вита Самара/Закуп/',
+    params = {'directory': '/opt/airflow/data/reports/ВИТА Самара/закуп/',
               'name_report': 'Закупки',
               'name_pharm_chain': 'Вита Самара',
               'prefix_topic': 'fpc_vita_samara'
