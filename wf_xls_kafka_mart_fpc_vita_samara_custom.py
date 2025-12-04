@@ -49,8 +49,9 @@ def wf_xls_kafka_mart_fpc_vita_samara_custom():
     @task
     def extract_from_xls(configs:dict, **context):
         loger = LoggingMixin().log
-        _dag_id = context["dag"].get_dag_id()
-        algo_id = _dag_id[3:]
+        _dag_id = context["dag"] if "dag" in context else ''
+        # Извлекаем algo_id из строкового представления объекта DAG
+        algo_id = str(_dag_id).split(':')[1].strip().strip('>')[3:]
         loger.info(f'Успешно получено algo_id {algo_id}!')
         for folder, files in configs[algo_id]['files'].items():
             for file in files:
