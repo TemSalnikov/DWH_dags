@@ -125,7 +125,6 @@ def _extract_sales_or_remains(path='', name_report='Продажи', name_pharm_
         df_melted = df.melt(id_vars=id_vars + group_vars, value_vars=address_vars, var_name='address', value_name='quantity')
 
         df_melted.dropna(subset=['quantity'], inplace=True)
-        df_melted = df_melted[df_melted['quantity'] != '0'].copy()
 
         df_melted.reset_index(drop=True, inplace=True)
         loger.info(f'Успешно получено {len(df_melted)} строк после преобразования!')
