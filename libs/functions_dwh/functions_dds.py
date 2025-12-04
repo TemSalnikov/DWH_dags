@@ -291,12 +291,15 @@ def save_meta(processed_dttm: str, stg_processed_dttm: str, **context):
 
     try:
         logger = LoggingMixin().log
+
+        
+
         dag_id = context["dag_run"].dag_id if "dag_run" in context else ''
         logger.info(f'Успешно получено dag_id {dag_id}!')
         # dag_id = str(_dag_id).split(':')[1].strip().strip('>')
         run_id = context["dag_run"].run_id if "dag_run" in context else ''
         # run_id = str(_run_id).split(':')[1].strip().strip('>')
-        logger.info(f'Успешно получено run_id {run_id}!')  
+        logger.info(f'Успешно получено run_id: {run_id}\n dag_id: {dag_id} \n processed_dttm: {processed_dttm}\n stg_processed_dttm: {stg_processed_dttm}')   
         conn = None
         hook = PostgresHook(postgres_conn_id="postgres_conn")
         conn = hook.get_conn()
