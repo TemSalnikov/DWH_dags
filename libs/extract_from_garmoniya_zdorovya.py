@@ -29,6 +29,7 @@ def extract_xls(path='', name_report='Закуп_Остатки_Продажи',
             'инн поставщика': 'distributor_inn',
             'интернет-заказ': 'internet_order',
             'подразделение': 'subdivision',
+            'наименование подразделения': 'subdivision',
             'адрес аптеки': 'address',
             'юрлицо': 'legal_entity',
             'инн': 'legal_entity_inn',
@@ -46,7 +47,6 @@ def extract_xls(path='', name_report='Закуп_Остатки_Продажи',
             'номер документа поставщика': 'doc_number',
             'канал продаж': 'sales_channel',
             'группа в договоре': 'contract_group',
-            'наименование подразделения': 'subdivision_name',
             'срок годности': 'expiration_date'
         }
 
@@ -99,9 +99,9 @@ def extract_xls(path='', name_report='Закуп_Остатки_Продажи',
         final_column_order = [
             'uuid_report','distributor', 'distributor_inn', 'internet_order', 'subdivision',
             'address', 'legal_entity', 'legal_entity_inn', 'product', 'product_code',
-            'quantity', 'sum_purchase', 'sum_manufacturer', 'sum_vat',
-            'doc_date', 'doc_number', 'sales_channel', 'contract_group',
-            'subdivision_name', 'expiration_date','name_pharm_chain', 'name_report',
+            'quantity', 'sum_purchase', 'sum_manufacturer', 'sum_vat', 'doc_date', 
+            'doc_number', 'sales_channel', 'contract_group', 'expiration_date',
+            'name_pharm_chain', 'name_report',
             'start_date', 'end_date', 'processed_dttm',
         ]
         
@@ -126,7 +126,7 @@ def extract_xls(path='', name_report='Закуп_Остатки_Продажи',
 if __name__ == "__main__":
     main_loger = LoggingMixin().log
 
-    test_file_path = r'C:\Users\nmankov\Desktop\отчеты\Гармония здоровья\Закупки, продажи, остатки\2023\03_2023.xlsx'
+    test_file_path = r'C:\Users\nmankov\Desktop\отчеты\Гармония здоровья\Закупки, продажи, остатки\2024\02_2024.xlsx'
 
     if os.path.exists(test_file_path):
         main_loger.info(f"Запуск локального теста для файла: {test_file_path}")
