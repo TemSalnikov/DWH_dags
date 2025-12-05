@@ -115,6 +115,9 @@ def extract_xls(path='', name_report='Закуп_Остатки_Продажи',
             if date_col in df_report.columns and not pd.isna(df_report[date_col]).all():
                 df_report[date_col] = pd.to_datetime(df_report[date_col], errors='coerce').dt.strftime('%Y-%m-%d %H:%M:%S')
 
+        # Финальная замена NaN на None, чтобы избежать проблем с сериализацией в JSON для Kafka
+        df_report = df_report.replace({np.nan: None})
+
         return {
             'table_report': df_report
         }
@@ -126,7 +129,7 @@ def extract_xls(path='', name_report='Закуп_Остатки_Продажи',
 if __name__ == "__main__":
     main_loger = LoggingMixin().log
 
-    test_file_path = r'C:\Users\nmankov\Desktop\отчеты\Гармония здоровья\Закупки, продажи, остатки\2024\02_2024.xlsx'
+    test_file_path = r'C:\Users\nmankov\Desktop\отчеты\Гармония здоровья\Закупки, продажи, остатки\2023\05_2023.xlsx'
 
     if os.path.exists(test_file_path):
         main_loger.info(f"Запуск локального теста для файла: {test_file_path}")
