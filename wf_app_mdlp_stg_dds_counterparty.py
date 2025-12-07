@@ -603,10 +603,10 @@ def wf_app_mdlp_stg_dds_counterparty():
     
     # Загрузка данных в целевую таблицу
     load_delta_task = load_delta(joined_keys_task, tgt_table_name, pk_list_dds, bk_list_dds)
-    str_params = ''
-    for i, key, val in enumerate(parameters_task['p_version_new'].items()):
-        str_params =   + '{\''+key + '\'' + ':' '\''+val + '\'' + (',' if i!=len(parameters_task['p_version_new'])-1 else '}') 
-    save_meta_task = save_meta(load_delta_task, str_params)
+    # str_params = ''
+    # for i, key, val in enumerate(parameters_task['p_version_new'].items()):
+    #     str_params =   + '{\''+key + '\'' + ':' '\''+val + '\'' + (',' if i!=len(parameters_task['p_version_new'])-1 else '}') 
+    save_meta_task = save_meta(load_delta_task, parameters_task['p_version_new'])
     
     # Определение зависимостей
     check_task >> parameters_task
