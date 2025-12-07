@@ -1,3 +1,4 @@
+import json
 import uuid
 import re
 from datetime import datetime
@@ -291,7 +292,8 @@ def save_meta(processed_dttm: str, stg_processed_dttm: str, **context):
 
     try:
         logger = LoggingMixin().log
-
+        if isinstance(stg_processed_dttm, dict):
+            stg_processed_dttm = json.dumps(stg_processed_dttm)
         
 
         dag_id = context["dag_run"].dag_id if "dag_run" in context else ''

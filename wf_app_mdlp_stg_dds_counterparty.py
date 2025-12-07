@@ -539,7 +539,7 @@ def wf_app_mdlp_stg_dds_counterparty():
 
             for tmp in tmp_tables:
                 query = f"""
-                DROP TABLE IF EXIST {tmp}
+                DROP TABLE IF EXISTS {tmp}
                 """
             
                 logger.info(f"Создан запрос для очистки: {query}")
