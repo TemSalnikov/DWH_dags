@@ -598,8 +598,7 @@ def wf_app_mdlp_stg_dds_counterparty():
         hub_salepoint_table
     )
 
-    cleanup = cleanup_tmp([algo1_task, algo2_task, algo3_task, algo4_task, algo5_task, algo6_task, algo7_task, union_table_task, generate_counterparty_sur_key_task,
-                           generate_salepoint_sur_key_task, joined_keys_task])
+    cleanup = cleanup_tmp([algo1_task, algo2_task, algo3_task, algo4_task, algo5_task, algo6_task, algo7_task, union_table_task, joined_keys_task])
     
     # Загрузка данных в целевую таблицу
     load_delta_task = load_delta(joined_keys_task, tgt_table_name, pk_list_dds, bk_list_dds)
