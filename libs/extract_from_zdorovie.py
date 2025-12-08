@@ -31,7 +31,7 @@ FINAL_COLUMNS = [
     'processed_dttm'
 ]
 
-def extract_custom(path='', name_report='Закупки', name_pharm_chain='Здоровье') -> dict:
+def _extract_custom(path='', name_report='Закупки', name_pharm_chain='Здоровье') -> dict:
     """
     Парсер для отчета 'Закупки' от 'Здоровье'.
     """
@@ -50,7 +50,17 @@ def extract_custom(path='', name_report='Закупки', name_pharm_chain='Зд
             raise ValueError("В файле не найден лист с закупками (не найдено 'закуп' в названии).")
 
         loger.info(f"Найден лист с закупками: '{sheet_name_purchases}'")
-        df = pd.read_excel(xls, sheet_name=sheet_name_purchases, dtype=str)
+
+        # Динамический поиск строки с заголовком
+        df_raw = pd.read_excel(xls, sheet_name=sheet_name_purchases, header=None, dtype=str)
+        header_row_index = -1
+        for i, row in df_raw.iterrows():
+            if 'наименование товара' in row.astype(str).str.lower().values:
+                header_row_index = i
+                break
+        if header_row_index == -1:
+            raise ValueError("Не удалось найти строку с заголовками в отчете по закупкам.")
+        df = pd.read_excel(xls, sheet_name=sheet_name_purchases, header=header_row_index, dtype=str)
         df.dropna(how='all', inplace=True)
         loger.info(f"Успешно прочитано {len(df)} строк из листа.")
 
@@ -102,7 +112,7 @@ def extract_custom(path='', name_report='Закупки', name_pharm_chain='Зд
         loger.error(f"Ошибка при парсинге отчета '{name_report}' для '{name_pharm_chain}': {e}", exc_info=True)
         raise
 
-def _extract_sales_or_remains(path='', name_report='Продажи', name_pharm_chain='Здоровье') -> dict:
+def _extract_sales_or_remains(path='', name_report='Продажи', name_pharm_chain='Здоровье', xls=None) -> dict:
     """
     Универсальный парсер для отчетов 'Продажи' и 'Остатки' от 'Здоровье'.
     """
@@ -121,7 +131,6 @@ def _extract_sales_or_remains(path='', name_report='Продажи', name_pharm_
         except ValueError:
             raise ValueError(f"Не удалось определить дату из имени файла '{os.path.basename(path)}'. Ожидаемый формат: ММ_ГГГГ.xlsx")
 
-        xls = pd.ExcelFile(path)
         target_sheet_name = None
 
         search_keyword = ''
@@ -167,23 +176,24 @@ def _extract_sales_or_remains(path='', name_report='Продажи', name_pharm_
 
         df_raw = pd.read_excel(xls, sheet_name=target_sheet_name, header=None, dtype=str)
         header_row_index = -1
+        # Ищем первую строку, где есть слово "аптека" в любой колонке, кроме первой.
+        # Это будет строка с названиями аптек.
         for i, row in df_raw.iterrows():
-            for j in range(min(2, len(row))):
-                if 'наименование' in str(row.iloc[j]).lower():
-                    header_row_index = i
-                    break
-            if header_row_index != -1: break
+            if any('аптека' in str(cell).lower() for cell in row[1:]):
+                header_row_index = i
+                break
         
         if header_row_index == -1:
-            raise ValueError("Не удалось найти строку с заголовком 'Наименование'.")
+            raise ValueError("Не удалось найти строку с заголовками аптек (по ключевому слову 'аптека').")
         
-        loger.info(f"Строка с основными заголовками найдена по индексу: {header_row_index}")
+        loger.info(f"Строка с названиями аптек найдена по индексу: {header_row_index}")
 
-        df = pd.read_excel(xls, sheet_name=target_sheet_name, header=header_row_index, dtype=str)
+        # Считываем заголовки аптек и юрлиц с найденной строки
+        pharmacy_names = df_raw.iloc[header_row_index, 1:].fillna('').astype(str)
+        legal_entities = df_raw.iloc[header_row_index + 1, 1:].fillna('').astype(str)
 
-        if not df.empty:
-            df.drop(df.tail(1).index, inplace=True)
-            loger.info("Удалена последняя строка (предположительно, 'Итог').")
+        # Читаем данные, начиная со строки ПОСЛЕ заголовков с юрлицами
+        df = pd.read_excel(xls, sheet_name=target_sheet_name, header=header_row_index + 2, dtype=str)
 
         if len(df.columns) > 1 and 'unnamed' in str(df.columns[1]).lower():
             unnamed_col_name = df.columns[1]
@@ -192,6 +202,11 @@ def _extract_sales_or_remains(path='', name_report='Продажи', name_pharm_
             pharmacy_names = pharmacy_names.drop(pharmacy_names.index[unnamed_col_index - 1])
             legal_entities = legal_entities.drop(legal_entities.index[unnamed_col_index - 1])
             loger.info(f"Обнаружена и удалена безымянная колонка: '{unnamed_col_name}' и соответствующий ей заголовок.")
+
+        # Удаляем последнюю строку с итогами, если она есть
+        if not df.empty and 'итог' in str(df.iloc[-1, 0]).lower():
+            df.drop(df.tail(1).index, inplace=True)
+            loger.info("Удалена последняя строка (предположительно, 'Итог').")
 
         df.columns = [df.columns[0]] + pharmacy_names.tolist()
         df.rename(columns={df.columns[0]: 'product_name'}, inplace=True)
@@ -289,12 +304,12 @@ def extract_xls(path, name_report, name_pharm_chain) -> dict:
 
             if 'закуп' in sheet_name.lower():
                 current_report_type = 'Закупки'
-                temp_result = extract_custom(path=path, name_report=current_report_type, name_pharm_chain=name_pharm_chain)
+                temp_result = _extract_custom(path=path, name_report=current_report_type, name_pharm_chain=name_pharm_chain)
                 df_sheet = temp_result.get('table_report')
 
             elif 'продаж' in sheet_name.lower() or 'остат' in sheet_name.lower():
                 current_report_type = 'Продажи' if 'продаж' in sheet_name.lower() else 'Остатки'
-                temp_result = _extract_sales_or_remains(path=path, name_report=current_report_type, name_pharm_chain=name_pharm_chain)
+                temp_result = _extract_sales_or_remains(path=path, name_report=current_report_type, name_pharm_chain=name_pharm_chain, xls=xls)
                 df_sheet = temp_result.get('table_report')
 
             if df_sheet is not None and not df_sheet.empty:
@@ -330,7 +345,7 @@ if __name__ == "__main__":
     import warnings
     warnings.filterwarnings("ignore", category=RuntimeWarning, module='airflow')
 
-    test_file_path = r'C:\Users\nmankov\Desktop\отчеты\Здоровье\Закуп_Продажи_Остатки\2024\03_2024.xlsx'
+    test_file_path = r'C:\Users\nmankov\Desktop\отчеты\Здоровье\Закуп_Продажи_Остатки\2024\05_2024.xlsx'
     report_type_to_test = 'Закуп_Продажи_Остатки'
 
     if os.path.exists(test_file_path):
