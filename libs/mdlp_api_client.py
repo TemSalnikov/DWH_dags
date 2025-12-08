@@ -13,9 +13,9 @@ import time
 
 # Конфигурация
 API_URL = "https://api.mdlp.crpt.ru/api/v1"
-CLIENT_ID = "0dc92a9d-50e2-4d01-8c2c-f9a0ef27ff31"
-CLIENT_SECRET = "21842175-2a01-43d7-86f8-dc5f3f3aabfe"
-USER_ID = "F8851B3675EC0C2CD9664A83C46CE62FC5F594EB"
+CLIENT_ID = "e2279a51-2007-4c2f-84dc-257e20aae986"
+CLIENT_SECRET = "72dcb484-23a4-4d3c-8d9f-e8605150b044"
+USER_ID = "d73913ca93cbb07865a6f3aab2f9af8925913a88"
 CERT_SUBJECT = "Благодаренко Юрий Юрьевич"
 CERT_PATH = "/opt/airflow/key/cert.pem"
 KEY_PATH = "/opt/airflow/key/cert.key"
