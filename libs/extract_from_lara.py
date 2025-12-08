@@ -86,11 +86,7 @@ def extract_purchases_lara(path, name_report, name_pharm_chain) -> dict:
             val_supp = str(row[idx_supp]).strip() if (idx_supp and idx_supp < len(row) and pd.notna(row[idx_supp])) else ""
             val_manuf = str(row[idx_manuf]).strip() if (idx_manuf and idx_manuf < len(row) and pd.notna(row[idx_manuf])) else ""
             val_batch = str(row[idx_batch]).strip() if (idx_batch and idx_batch < len(row) and pd.notna(row[idx_batch])) else ""
-            
-            try:
-                val_qty = float(row[idx_qty]) if (idx_qty < len(row) and pd.notna(row[idx_qty])) else 0.0
-            except (ValueError, TypeError):
-                val_qty = 0.0
+            val_qty = str(row[idx_qty]).strip() if (idx_qty < len(row) and pd.notna(row[idx_qty])) else ""
 
             row_dict = {
                 'uuid': str(uuid.uuid4()),
@@ -119,6 +115,7 @@ def extract_purchases_lara(path, name_report, name_pharm_chain) -> dict:
     if df_result.empty:
         loger.warning("Внимание: отчет пуст. Проверьте индексы или формат файла.")
     else:
+        df_result['report_date'] = pd.to_datetime(df_result['report_date']).dt.strftime('%Y-%m-%d %H:%M:%S')
         df_result['start_date'] = start_date.strftime('%Y-%m-%d %H:%M:%S')
         df_result['end_date'] = end_date.strftime('%Y-%m-%d %H:%M:%S')
         df_result['processed_dttm'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
