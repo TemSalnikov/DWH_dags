@@ -89,7 +89,7 @@ def extract_purchases_lara(path, name_report, name_pharm_chain) -> dict:
             val_qty = str(row[idx_qty]).strip() if (idx_qty < len(row) and pd.notna(row[idx_qty])) else ""
 
             row_dict = {
-                'uuid': str(uuid.uuid4()),
+                'uuid_report': str(uuid.uuid4()),
                 'report_date': current_doc_date if current_doc_date else start_date,
                 'pharmacy_name': col_0,
                 'product_name': current_product,
@@ -99,8 +99,8 @@ def extract_purchases_lara(path, name_report, name_pharm_chain) -> dict:
                 'firm': val_firm,
                 'batch_number': val_batch,
                 'quantity': val_qty,
-                'pharm_chain_name': name_pharm_chain,
-                'type_report': name_report
+                'name_pharm_chain': name_pharm_chain,
+                'name_report': name_report
             }
             
             data_rows.append(row_dict)
