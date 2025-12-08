@@ -192,24 +192,30 @@ def _extract_sales_or_remains(path='', name_report='Продажи', name_pharm_
         pharmacy_names = df_raw.iloc[header_row_index, 1:].fillna('').astype(str)
         legal_entities = df_raw.iloc[header_row_index + 1, 1:].fillna('').astype(str)
 
-        # Читаем данные, начиная со строки ПОСЛЕ заголовков с юрлицами
-        df = pd.read_excel(xls, sheet_name=target_sheet_name, header=header_row_index + 2, dtype=str)
-
-        if len(df.columns) > 1 and 'unnamed' in str(df.columns[1]).lower():
-            unnamed_col_name = df.columns[1]
-            unnamed_col_index = df.columns.get_loc(unnamed_col_name)
-            df.drop(columns=[unnamed_col_name], inplace=True)
-            pharmacy_names = pharmacy_names.drop(pharmacy_names.index[unnamed_col_index - 1])
-            legal_entities = legal_entities.drop(legal_entities.index[unnamed_col_index - 1])
-            loger.info(f"Обнаружена и удалена безымянная колонка: '{unnamed_col_name}' и соответствующий ей заголовок.")
+        # Данные начинаются на 2 строки ниже строки с названиями аптек
+        data_start_row = header_row_index + 2
+        df = df_raw.iloc[data_start_row:].copy()
+        df.reset_index(drop=True, inplace=True)
+        # Устанавливаем названия колонок вручную, используя первую строку данных как шаблон
+        df.columns = df_raw.iloc[data_start_row - 1].values
 
         # Удаляем последнюю строку с итогами, если она есть
         if not df.empty and 'итог' in str(df.iloc[-1, 0]).lower():
             df.drop(df.tail(1).index, inplace=True)
             loger.info("Удалена последняя строка (предположительно, 'Итог').")
-
+        
         df.columns = [df.columns[0]] + pharmacy_names.tolist()
         df.rename(columns={df.columns[0]: 'product_name'}, inplace=True)
+
+        # Проверка и удаление безымянной колонки после присвоения имен
+        if len(df.columns) > 1 and 'unnamed' in str(df.columns[1]).lower():
+            unnamed_col_name = df.columns[1]
+            # Находим индекс колонки для удаления из списков заголовков
+            unnamed_col_index = df.columns.get_loc(unnamed_col_name)
+            df.drop(columns=[unnamed_col_name], inplace=True)
+            pharmacy_names = pharmacy_names.drop(pharmacy_names.index[unnamed_col_index - 1])
+            legal_entities = legal_entities.drop(legal_entities.index[unnamed_col_index - 1])
+            loger.info(f"Обнаружена и удалена безымянная колонка: '{unnamed_col_name}' и соответствующий ей заголовок.")
 
         total_col = next((col for col in df.columns if 'итог' in str(col).lower()), None)
         if total_col:
@@ -219,6 +225,10 @@ def _extract_sales_or_remains(path='', name_report='Продажи', name_pharm_
         id_vars = ['product_name']
         value_vars = [col for col in df.columns if col not in id_vars]
         df_melted = df.melt(id_vars=id_vars, value_vars=value_vars, var_name='pharmacy_name', value_name='quantity')
+
+        # Удаляем строки, где не удалось определить название аптеки (пустое значение)
+        df_melted.dropna(subset=['pharmacy_name'], inplace=True)
+        df_melted = df_melted[df_melted['pharmacy_name'].astype(str).str.strip() != '']
 
         df_melted.dropna(subset=['quantity'], inplace=True)
         df_melted = df_melted[pd.to_numeric(df_melted['quantity'], errors='coerce').notna()]
@@ -345,7 +355,7 @@ if __name__ == "__main__":
     import warnings
     warnings.filterwarnings("ignore", category=RuntimeWarning, module='airflow')
 
-    test_file_path = r'C:\Users\nmankov\Desktop\отчеты\Здоровье\Закуп_Продажи_Остатки\2024\05_2024.xlsx'
+    test_file_path = r'C:\Users\nmankov\Desktop\отчеты\Здоровье\Закуп_Продажи_Остатки\2024\08_2024.xlsx'
     report_type_to_test = 'Закуп_Продажи_Остатки'
 
     if os.path.exists(test_file_path):
