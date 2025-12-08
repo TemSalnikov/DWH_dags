@@ -71,9 +71,9 @@ def wf_app_mdlp_stg_dds_counterparty():
             
             # logger.info(f"Получен набор параметров: {context["params"]}")
             logger.info(f"Обработанный набор параметров набор параметров: {dag_run_conf}")
-            parameters = {**context["params"]
+            parameters = json.dumps({**context["params"]
                         #   , **dag_run_conf
-                          }
+                          })
             logger.info(f"Получен набор параметров: {parameters}, {type(parameters)}")
             return parameters
         else: 
@@ -491,13 +491,14 @@ def wf_app_mdlp_stg_dds_counterparty():
             query = f"""
             CREATE TABLE {tmp_table_name} 
             ENGINE = MergeTree()
-            PRIMARY KEY (inn_code, address_name)
-            ORDER BY (inn_code, address_name)
+            PRIMARY KEY ({name_counterparty_sur_key}, {name_salepoint_sur_key})
+            ORDER BY ({name_counterparty_sur_key}, {name_salepoint_sur_key})
             AS
             SELECT 
-                t.*,
-                hc.counterparty_pk as {name_counterparty_sur_key},
-                hs.counterparty_salepoint_pk as {name_salepoint_sur_key},
+                t.* EXCEPT (src),
+                t.src as src,
+                hc.{name_counterparty_sur_key},
+                hs.{name_salepoint_sur_key},
                 toDateTime('1990-01-01 00:01:01') as effective_from_dttm,
                 toDateTime('2999-12-31 23:59:59') as effective_to_dttm
             FROM {inc_table} t
@@ -526,6 +527,33 @@ def wf_app_mdlp_stg_dds_counterparty():
             if client:
                 client.disconnect()
                 logger.debug("Подключение к ClickHouse закрыто")
+    @task
+    def cleanup_tmp(tmp_tables: list) -> str:
+        """Объединение суррогатных ключей из двух хабов"""
+        
+        
+        try:
+            logger = LoggingMixin().log
+            client = tg_sur.get_clickhouse_client()
+            logger.info("Подключение к ClickHouse успешно выполнено")
+
+            for tmp in tmp_tables:
+                query = f"""
+                DROP TABLE IF EXISTS {tmp}
+                """
+            
+                logger.info(f"Создан запрос для очистки: {query}")
+                client.execute(query)
+
+            
+        except tg_sur.ClickhouseError as e:
+            logger.error(f"Ошибка при очистке: {e}")
+            raise
+        finally:
+            if client:
+                client.disconnect()
+                logger.debug("Подключение к ClickHouse закрыто")
+
 
     # Задачи DAG
     check_task = check_data_availability()
@@ -569,9 +597,14 @@ def wf_app_mdlp_stg_dds_counterparty():
         hub_counterparty_table,
         hub_salepoint_table
     )
+
+    cleanup = cleanup_tmp([algo1_task, algo2_task, algo3_task, algo4_task, algo5_task, algo6_task, algo7_task, union_table_task, joined_keys_task])
     
     # Загрузка данных в целевую таблицу
     load_delta_task = load_delta(joined_keys_task, tgt_table_name, pk_list_dds, bk_list_dds)
+    # str_params = ''
+    # for i, key, val in enumerate(parameters_task['p_version_new'].items()):
+    #     str_params =   + '{\''+key + '\'' + ':' '\''+val + '\'' + (',' if i!=len(parameters_task['p_version_new'])-1 else '}') 
     save_meta_task = save_meta(load_delta_task, parameters_task['p_version_new'])
     
     # Определение зависимостей
@@ -582,6 +615,6 @@ def wf_app_mdlp_stg_dds_counterparty():
                        algo5_task, algo6_task, algo7_task] >> union_table_task
     
     union_table_task >> [generate_counterparty_sur_key_task, generate_salepoint_sur_key_task] >> joined_keys_task
-    joined_keys_task >> load_delta_task >> save_meta_task
+    joined_keys_task >> load_delta_task >> save_meta_task >> cleanup
 
 wf_app_mdlp_stg_dds_counterparty()

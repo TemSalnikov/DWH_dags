@@ -26,18 +26,18 @@ default_args = {
 }
 
 @dag(
-    dag_id='cf_xls_kafka_mart_fpc_vita_samara_custom',
+    dag_id='cf_xls_kafka_mart_fpc_vita_tomsk_sale',
     default_args=default_args,
     schedule_interval=None,
     catchup=False,
-    params = {'directory': '/opt/airflow/data/reports/ВИТА Самара/закуп/',
-              'name_report': 'Закупки',
-              'name_pharm_chain': 'Вита Самара',
-              'prefix_topic': 'fpc_vita_samara'
+    params = {'directory': '/opt/airflow/data/reports/Вита Томск/Продажи/',
+              'name_report': 'Продажи',
+              'name_pharm_chain': 'Вита Томск',
+              'prefix_topic': 'fpc_vita_tomsk'
             },
-    tags=['advanced', 'vita_samara']
+    tags=['advanced', 'vita_tomsk']
 )
-def cf_xls_kafka_mart_fpc_vita_samara_custom():
+def cf_xls_kafka_mart_fpc_vita_tomsk_sale():
     @task
     def check_data_availability() -> bool:
         return True
@@ -105,22 +105,13 @@ def cf_xls_kafka_mart_fpc_vita_samara_custom():
     @task
     def trigger_or_skip(parametrs: Optional[Dict], processing_files: Optional[Dict], **context):
         loger = LoggingMixin().log
-        loger.info(f'Полученный контекст: {context}!')
-        from airflow.api.common.trigger_dag import trigger_dag
         if processing_files:
             parametrs['files'] = processing_files
-            _dag_id = context["dag"] if "dag" in context else ''
-            _dag_id = str(_dag_id).split(':')[1].strip().strip('>')
-            loger.info(f'Успешно получено dag_id {_dag_id}!')
-            result = trigger_dag(
-                dag_id='wf'+ _dag_id[2:],
-                run_id=f"triggered_by_{context['dag_run'].run_id}",
-                conf={_dag_id[3:]:parametrs},
-                execution_date=None,
-                replace_microseconds=False
-            )
-            if not result:
-                raise RuntimeError("Не удалось запустить дочерний DAG")
+            TriggerDagRunOperator(
+                task_id=f"trigger_wf_xls_kafka_mart_fpc_vita_tomsk_sale",
+                trigger_dag_id='wf_xls_kafka_mart_fpc_vita_tomsk_sale',
+                conf=parametrs
+            ).execute(context)
         else:
             raise AirflowSkipException("Условия не выполнены, пропускаем запуск целевого DAG")
 
@@ -135,4 +126,4 @@ def cf_xls_kafka_mart_fpc_vita_samara_custom():
     processing_files = get_files_for_processing(processinf_folders, meta_files, files)
     trigger_or_skip(parametrs, processing_files)
 
-cf_xls_kafka_mart_fpc_vita_samara_custom()
+cf_xls_kafka_mart_fpc_vita_tomsk_sale()

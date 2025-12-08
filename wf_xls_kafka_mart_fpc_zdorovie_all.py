@@ -9,7 +9,7 @@ project_path = os.path.dirname(script_path)+'/libs'
 sys.path.append(project_path)
 
 from kafka_producer_common_for_xls import call_producer
-from extract_from_vita_samara import extract_custom
+from extract_from_zdorovie import extract_xls
 
 
 default_args = {
@@ -27,18 +27,19 @@ default_args = {
 
 
 @dag(
-    dag_id = 'wf_xls_kafka_mart_fpc_vita_samara_custom',
+    dag_id = 'wf_xls_kafka_mart_fpc_zdorovie_all',
     default_args=default_args,
     schedule_interval=None,
     catchup=False,
-    tags=['advanced', 'vita_samara']
+    tags=['advanced', 'zdorovie']
 )
 
-def wf_xls_kafka_mart_fpc_vita_samara_custom():
+def wf_xls_kafka_mart_fpc_zdorovie_all():
 
     @task
     def check_data_availability() -> bool:
         return True
+    
     @task
     def prepare_parameters(data_ready: bool, **context) -> dict:
         if data_ready:
@@ -46,26 +47,27 @@ def wf_xls_kafka_mart_fpc_vita_samara_custom():
             parametrs = {**context["params"], **dag_run_conf}
             return parametrs
         else: raise
+
     @task
-    def extract_from_xls(configs:dict, **context):
+    def extract_from_xls_task(configs:dict, **context):
         loger = LoggingMixin().log
-        _dag_id = context["dag"] if "dag" in context else ''
-        # Извлекаем algo_id из строкового представления объекта DAG
-        algo_id = str(_dag_id).split(':')[1].strip().strip('>')[3:]
+        _dag_id = context["dag"].dag_id
+        algo_id = _dag_id[3:]
         loger.info(f'Успешно получено algo_id {algo_id}!')
+        
         for folder, files in configs[algo_id]['files'].items():
             for file in files:
                 loger.info(f"Параметры записи в Кафка: {configs[algo_id]['directory']+'/'+folder+'/'+file},{configs[algo_id]['name_report']},{configs[algo_id]['name_pharm_chain']},{configs[algo_id]['prefix_topic']}")
-                if call_producer(extract_custom,
+                if call_producer(extract_xls,
                                         configs[algo_id]['directory']+'/'+folder+'/'+file,
                                         configs[algo_id]['name_report'],
                                         configs[algo_id]['name_pharm_chain'],
                                         configs[algo_id]['prefix_topic']):
-                    write_meta_file(configs[algo_id]['directory'], folder, file)
+                    write_meta_file(
+                        configs[algo_id]['directory'],folder,file)
 
     start_flow = check_data_availability()
     parametrs = prepare_parameters(start_flow)
-    extract_from_xls(parametrs)
+    extract_from_xls_task(parametrs)
 
-
-wf_xls_kafka_mart_fpc_vita_samara_custom()
+wf_xls_kafka_mart_fpc_zdorovie_all()

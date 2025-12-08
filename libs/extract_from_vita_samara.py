@@ -78,6 +78,9 @@ def extract_custom(path='', name_report='Закупки', name_pharm_chain='Ви
         
         df_report = df_report[final_columns]
 
+        # Замена NaN на None для корректной сериализации в JSON для Kafka
+        df_report = df_report.replace({pd.NA: None, pd.NaT: None, float('nan'): None})
+
         loger.info("Парсинг успешно завершен.")
         return {'table_report': df_report}
 
@@ -125,7 +128,6 @@ def _extract_sales_or_remains(path='', name_report='Продажи', name_pharm_
         df_melted = df.melt(id_vars=id_vars + group_vars, value_vars=address_vars, var_name='address', value_name='quantity')
 
         df_melted.dropna(subset=['quantity'], inplace=True)
-        df_melted = df_melted[df_melted['quantity'] != '0'].copy()
 
         df_melted.reset_index(drop=True, inplace=True)
         loger.info(f'Успешно получено {len(df_melted)} строк после преобразования!')
@@ -169,6 +171,9 @@ def _extract_sales_or_remains(path='', name_report='Продажи', name_pharm_
         
         df_report = df_melted[final_columns]
 
+        # Замена NaN на None для корректной сериализации в JSON для Kafka
+        df_report = df_report.replace({pd.NA: None, pd.NaT: None, float('nan'): None})
+
         return {'table_report': df_report}
     except Exception as e:
         loger.error(f"Ошибка при парсинге отчета '{name_report}' для '{name_pharm_chain}': {e}", exc_info=True)
@@ -191,7 +196,7 @@ def extract_xls(path, name_report, name_pharm_chain) -> dict:
 
 if __name__ == "__main__":
     main_loger = LoggingMixin().log
-    test_file_path = r'C:\Users\nmankov\Desktop\отчеты\ВИТА Самара\Остатки\2024\10_2024.xlsx'
+    test_file_path = r'C:\Users\nmankov\Desktop\отчеты\ВИТА Самара\Остатки\2024\03_2024.xlsx'
     
     if os.path.exists(test_file_path):
         main_loger.info(f"Запуск локального теста для файла: {test_file_path}")

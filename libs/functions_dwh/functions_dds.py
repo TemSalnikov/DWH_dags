@@ -1,3 +1,4 @@
+import json
 import uuid
 import re
 from datetime import datetime
@@ -115,11 +116,11 @@ def load_delta(src_table: str, tgt_table:str, pk_list: list, bk_list:list):
             ORDER BY ({pk_joined})
             AS
             SELECT  
-               t.{pk_joined},
-               t.{bk_joined},
+               t.{', t.'.join(pk_list)},
+               t.{', t.'.join(bk_list)},
                t.effective_from_dttm,
                t.effective_to_dttm,
-               t.src,
+               t.src as src,
                t.hash_diff
             FROM {tgt_table} t
             JOIN {tmp_hash_tbl} h
@@ -291,22 +292,27 @@ def save_meta(processed_dttm: str, stg_processed_dttm: str, **context):
 
     try:
         logger = LoggingMixin().log
+        if isinstance(stg_processed_dttm, dict):
+            stg_processed_dttm = json.dumps(stg_processed_dttm)
+        
+
         dag_id = context["dag_run"].dag_id if "dag_run" in context else ''
         logger.info(f'Успешно получено dag_id {dag_id}!')
         # dag_id = str(_dag_id).split(':')[1].strip().strip('>')
         run_id = context["dag_run"].run_id if "dag_run" in context else ''
         # run_id = str(_run_id).split(':')[1].strip().strip('>')
-        logger.info(f'Успешно получено run_id {run_id}!')  
+        logger.info(f'Успешно получено run_id: {run_id}\n dag_id: {dag_id} \n processed_dttm: {processed_dttm}\n stg_processed_dttm: {stg_processed_dttm}')   
         conn = None
         hook = PostgresHook(postgres_conn_id="postgres_conn")
         conn = hook.get_conn()
         cur = conn.cursor()
         
-        
-        cur.execute(f"""
+        query = f"""
             INSERT INTO versions (dag_id, run_id, dds_processed_dttm, loaded_stg_processed_dttm)
             VALUES ('{dag_id}','{run_id}','{processed_dttm}', '{stg_processed_dttm}')
-        """)
+        """
+        logger.info(f"Создан запрос для объединения суррогатных ключей: {query}")
+        cur.execute(query)
         conn.commit()
         return True
     except Exception as e:
