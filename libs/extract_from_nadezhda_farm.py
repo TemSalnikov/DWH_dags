@@ -50,7 +50,6 @@ def extract_nadezhda_farm(path='', name_report='Закупки', name_pharm_chai
         loger.info(f"Выбран лист для парсинга: '{target_sheet}'")
         df = pd.read_excel(xls, sheet_name=target_sheet, dtype=str)
         
-        # Приводим заголовки к строковому типу и убираем пробелы
         df.columns = [str(col).strip() for col in df.columns]
 
         rename_map = {
