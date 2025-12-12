@@ -38,3 +38,30 @@ default_args = {
 )
 def wf_app_dsm_stg_dds_sale():
     pass
+
+    # Создание таблицы с ключами
+    # hub
+    # sql_query: ddl_dds_sale.sql
+    
+    # CREATE table if not exists dds.hub_sale
+    #     (sale_uuid String,
+    #      sale_id String,
+    #     src String,
+    #     effective_from_dttm DateTime,
+    #     effective_to_dttm DateTime,
+    #     processed_dttm DateTime,
+    #     deleted_flg bool
+    #     )
+    #     ENGINE = MergeTree
+    #     order by (sale_uuid);
+    # + после досоздать аксессоры через дипсик
+
+    src_table_name = 'mart_dsm_stat_product'    #название таблицы источника
+    tgt_table_name = 'dds.sale'              #название целевой таблицы НАДО СОЗДАТЬ ТАБЛИЦУ
+    hub_table_name = 'dds.hub_sale'          #название таблицы Хаба
+    pk_list = ['mnn', 'address', 'date_of_disposal']                      #список полей PK источника
+    pk_list_dds = ['sale_uuid']              #список полей PK таргета
+    bk_list = [] # можно вставить через запрос? путем вывода всех столбцов? #Список полей бизнесс данных источника
+    bk_list_dds = [] #Список полей бизнесс данных таргета - КАКИЕ требуются?
+    
+    
