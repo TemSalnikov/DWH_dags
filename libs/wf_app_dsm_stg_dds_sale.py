@@ -126,6 +126,51 @@ def wf_app_dsm_stg_dds_sale():
                 client.disconnect()
                 logger.debug("Подключение к ClickHouse закрыто")
     
+    @task
+    def get_prepared_data(tmp_table: str, hub_table: str, src_pk:str,  hub_pk: str, hub_id: str) -> str:
+        """Получение ключей из Hub"""
+        client = None
+        
+        try:
+            tmp_table_name = f"tmp.tmp_preload_{tg_sur.uuid.uuid4().hex}"
+            logger = LoggingMixin().log # ПОЧЕМУ НЕ ВЫНЕСТИ КАК ГЛОАБЛЬНУЮ ПЕРМЕННУЮ?
+            client = tg_sur.get_clickhouse_client()
+            logger.info(f"Подклчение к clickhouse успешно выполнено")
+
+            query_set = "SET allow_experimental_join_condition = 1"
+            client.execute(query_set)
+
+            ### надо подумать над запросом
+            query = f"""
+            CREATE TABLE {tmp_table_name} 
+            ENGINE = MergeTree()
+            PRIMARY KEY ({', '.join(pk_list)})
+            ORDER BY ({', '.join(pk_list)})
+            AS
+            SELECT DISTINCT 
+                h.{hub_pk} as {name_sur_key},
+                t.*,
+                toDateTime('1990-01-01 00:01:01') as effective_from_dttm,
+                toDateTime('2999-12-31 23:59:59') as effective_to_dttm
+            FROM {tmp_table} t
+            JOIN dds.v_sn_{hub_table[4:]} h 
+                ON t.{src_pk} = h.{hub_id} AND t.src = h.src AND h.effective_from_dttm <= t.effective_dttm
+                AND h.effective_to_dttm > t.effective_dttm
+            """
+            logger.info(f"Создан запрос: {query}")
+
+            client.execute(query)
+            logger.info(f"Создана временная таблица {tmp_table_name}")
+            
+            return tmp_table_name
+            
+        except tg_sur.ClickhouseError as e:
+            logger.error(f"Ошибка при получении данных из {tmp_table}: {e}")
+            raise
+        finally:
+            if client:
+                client.disconnect()
+                logger.debug("Подключение к ClickHouse закрыто")
 
     
     
