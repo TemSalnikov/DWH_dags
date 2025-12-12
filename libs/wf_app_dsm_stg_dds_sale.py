@@ -63,5 +63,70 @@ def wf_app_dsm_stg_dds_sale():
     pk_list_dds = ['sale_uuid']              #список полей PK таргета
     bk_list = [] # можно вставить через запрос? путем вывода всех столбцов? #Список полей бизнесс данных источника
     bk_list_dds = [] #Список полей бизнесс данных таргета - КАКИЕ требуются?
+    name_sur_key = 'sale_uuid'       #название сурогатного ключа
+
+    @task
+    def check_data_availability() -> bool:
+        # Проверяет готовность данных (пример реализации).
+        # Возвращает True если данные готовы.
+
+        # Здесь может быть проверка файлов, запрос к API или БД
+        # Для примера просто возвращаем True
+        return True
+
+    @task
+    def prepare_parameters(data_ready: bool, **context) -> dict:
+
+        # Получаем параметры DAG
+        if data_ready:
+            # Получаем параметры из контекста выполнения
+            dag_run_conf = context["dag_run"].conf if "dag_run" in context else {}
+            # Объединяем с параметрами по умолчанию из DAG
+            parametrs = {**context["params"], **dag_run_conf}
+            return parametrs
+        else: 
+            raise # МБ break?
+    
+    @task
+    def get_inc_load_data(source_table: str, pk_list: list, bk_list:list, p_version_prev: str, p_version_new: str) -> str:
+        """Получение последних данных из источника"""
+        client = None
+        tmp_table_name = f"tmp.tmp_v_sv_all_{source_table}_{tg_sur.uuid.uuid4().hex}" # почему такое название таблицы?
+        
+        try:
+            logger = LoggingMixin().log
+            client = tg_sur.get_clickhouse_client()
+            logger.info(f"Подклчение к clickhouse успешно выполнено")
+            ### надо подумать над запросом
+            # ПОЧЕМУ effective_dttm ПРИНУДИТЕЛЬНО ПРИСВАИВАЕТСЯ toDateTime('1990-01-01 00:01:01') ? это же полная дата в отчета в истонике
+            query = f"""
+            CREATE TABLE {tmp_table_name} 
+            ENGINE = MergeTree()
+            PRIMARY KEY ({', '.join(pk_list)})
+            ORDER BY ({', '.join(pk_list)})
+            AS 
+            SELECT 
+                {', '.join([f'{item1} as {item2}' for item1, item2 in zip(bk_list, bk_list_dds)])},
+                'DSM' as src,
+                toDateTime('1990-01-01 00:01:01') as effective_dttm                
+            FROM stg.v_iv_{source_table}(p_from_dttm = \'{p_version_prev}\', p_to_dttm = \'{p_version_new}\')
+            """
+            logger.info(f"Создан запрос: {query}")
+
+            client.execute(query)
+            logger.info(f"Создана временная таблица {tmp_table_name} с данными из {source_table}")
+            
+            return tmp_table_name
+            
+        except tg_sur.ClickhouseError as e:
+            logger.error(f"Ошибка при получении данных из {source_table}: {e}")
+            raise
+        finally:
+            if client:
+                client.disconnect()
+                logger.debug("Подключение к ClickHouse закрыто")
+    
+
+    
     
     
