@@ -1,5 +1,7 @@
 /* mart_dsm_sale */
 
+
+
 /* 1. Аксессор получения актуального среза на конкретную дату обработки*/
 CREATE VIEW stg.v_sn_mart_dsm_sale
 AS 
