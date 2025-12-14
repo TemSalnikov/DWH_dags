@@ -31,7 +31,7 @@ default_args = {
     default_args=default_args,
     schedule_interval=None,
     catchup=False,
-    params = {'directory': '/opt/airflow/data/reports/проАптека/Закуп Продажи Остатки/',
+    params = {'directory': '/opt/airflow/data/reports/ПроАптека/Закуп Продажи Остатки/',
               'name_report': 'Закуп_Продажи_Остатки',
               'name_pharm_chain': 'проАптека',
               'prefix_topic': 'fpc_pro_apteka'
