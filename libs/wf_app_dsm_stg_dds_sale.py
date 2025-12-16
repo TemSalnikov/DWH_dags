@@ -87,39 +87,58 @@ def wf_app_dsm_stg_dds_sale():
         else: 
             raise # МБ break?
     
+    # Алгоритм 1: mart_mdlp_general_report_on_disposal (полные данные участника)
     @task
-    def get_inc_load_data(source_table: str, pk_list: list, bk_list:list, p_version_prev: str, p_version_new: str) -> str:
-        """Получение последних данных из источника"""
+    def get_inc_load_data(p_version: dict, name_src_tbl:str) -> str:
         client = None
-        tmp_table_name = f"tmp.tmp_v_sv_all_{source_table}_{tg_sur.uuid.uuid4().hex}" # почему такое название таблицы?
-        
+        logger = LoggingMixin().log
+        tmp_table_name = f"tmp.tmp_algo1_{tg_sur.uuid.uuid4().hex}"
+        logger.info(f"получены параметры: {p_version}: {type(p_version)}")
+        p_version_prev = p_version['p_version_prev'][name_src_tbl][:19]
+        p_version_new = p_version['p_version_new'][name_src_tbl][:19]
+        logger.info(f"получены параметры: {p_version_prev}: {p_version_new}")
         try:
-            logger = LoggingMixin().log
+            
             client = tg_sur.get_clickhouse_client()
-            logger.info(f"Подклчение к clickhouse успешно выполнено")
-            ### надо подумать над запросом
-            # ПОЧЕМУ effective_dttm ПРИНУДИТЕЛЬНО ПРИСВАИВАЕТСЯ toDateTime('1990-01-01 00:01:01') ? это же полная дата в отчета в истонике
+            logger.info("Подключение к ClickHouse успешно выполнено")
+            
             query = f"""
             CREATE TABLE {tmp_table_name} 
             ENGINE = MergeTree()
-            PRIMARY KEY ({', '.join(pk_list)})
-            ORDER BY ({', '.join(pk_list)})
+            PRIMARY KEY (inn_code, address_name)
+            ORDER BY (inn_code, address_name)
             AS 
             SELECT 
-                {', '.join([f'{item1} as {item2}' for item1, item2 in zip(bk_list, bk_list_dds)])},
-                'DSM' as src,
-                toDateTime('1990-01-01 00:01:01') as effective_dttm                
-            FROM stg.v_iv_{source_table}(p_from_dttm = \'{p_version_prev}\', p_to_dttm = \'{p_version_new}\')
+                tin_of_the_participant as inn_code,
+                name_of_the_participant as counterparty_name,
+                code_of_the_subject_of_the_russian_federation as the_subject_code,
+                the_subject_of_the_russian_federation as the_subject_name,
+                settlement as settlement_name,
+                district as district_name,
+                trim(BOTH ', ' FROM 
+				        if(
+						        match(address, '^[0-9]{6},'),
+						        trimLeft(substring(address, position(address, ',') + 1)),
+						        address
+						    )
+				    )
+                 as address_name,
+                identifier_md_participant as md_system_code,
+                'MDLP' as src,
+                toDateTime('1990-01-01 00:01:01') as effective_dttm,
+                1 as algorithm_type,
+                concat(toString(tin_of_the_participant), '^^', address_name) as salepoint_business_key
+            FROM stg.v_iv_mart_mdlp_general_report_on_disposal(p_from_dttm = '{p_version_prev}', p_to_dttm = '{p_version_new}')
             """
-            logger.info(f"Создан запрос: {query}")
-
+            
+            logger.info(f"Создан запрос для алгоритма 1: {tmp_table_name}: \n {query}")
             client.execute(query)
-            logger.info(f"Создана временная таблица {tmp_table_name} с данными из {source_table}")
+            logger.info(f"Создана временная таблица {tmp_table_name} для алгоритма 1")
             
             return tmp_table_name
             
         except tg_sur.ClickhouseError as e:
-            logger.error(f"Ошибка при получении данных из {source_table}: {e}")
+            logger.error(f"Ошибка при получении данных алгоритма 1: {e}")
             raise
         finally:
             if client:
