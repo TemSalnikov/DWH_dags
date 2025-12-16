@@ -171,6 +171,20 @@ def wf_app_dsm_stg_dds_sale():
             if client:
                 client.disconnect()
                 logger.debug("Подключение к ClickHouse закрыто")
+    
+    check_task = check_data_availability()
+    parametrs_data_task = prepare_parameters(check_task)
+    inc_table_task = get_inc_load_data(src_table_name,pk_list, bk_list, parametrs_data_task['p_version_prev'], parametrs_data_task['p_version_new'])
+    generate_sur_key_task = tg_sur.hub_load_processing_tasks(hub_table_name, inc_table_task, pk_list[0], 'product_uuid', 'product_id')
+    prepared_data_task = get_prepared_data(inc_table_task, hub_table_name, pk_list[0], 'product_uuid', 'product_id')
+    # hist_p2i_task = convert_hist_p2i(prepared_data_task, pk_list)
+    load_delta_task = load_delta(prepared_data_task, tgt_table_name, ['product_uuid'], bk_list_dds)
+    save_meta_task = save_meta(load_delta_task, parametrs_data_task['p_version_new'])
+    
+    check_task >> parametrs_data_task >> inc_table_task >> generate_sur_key_task >> prepared_data_task
+    inc_table_task >> prepared_data_task >> load_delta_task >> save_meta_task
+
+wf_app_dsm_stg_dds_sale()
 
     
     
