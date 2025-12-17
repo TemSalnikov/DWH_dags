@@ -211,7 +211,7 @@ def extract_xls(path: str, name_report: str, name_pharm_chain: str = 'Фарма
                             # Удаляем пустые строки и строки с итогами
                             df_slice.dropna(how='all', inplace=True)
                             if not df_slice.empty:
-                                df_slice = df_slice[~df_slice.iloc[:, 0].astype(str).str.contains('итог', case=False, na=False)]
+                                df_slice = df_slice[~df_slice.iloc[:, 0].astype(str).str.strip().str.lower().str.startswith(('итог', 'общий итог'))]
                             
                             all_data.append(df_slice)
                             loger.info(f"Обработана секция '{r_type}', строк: {len(df_slice)}")
@@ -314,7 +314,7 @@ def extract_xls(path: str, name_report: str, name_pharm_chain: str = 'Фарма
 
 if __name__ == "__main__":
     main_loger = LoggingMixin().log
-    test_file_path = r'c:\Users\nmankov\Desktop\отчеты\Фармаимпекс\Закуп_Продажи_Остатки\2023\07_2023.xlsx'    
+    test_file_path = r'c:\Users\nmankov\Desktop\отчеты\Фармаимпекс\Закуп_Продажи_Остатки\2025\01_2025.xlsx'    
     if os.path.exists(test_file_path):
         main_loger.info(f"Запуск локального теста для файла: {test_file_path}")
         try:
