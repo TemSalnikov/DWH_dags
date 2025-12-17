@@ -56,6 +56,34 @@ def wf_app_dsm_stg_dds_sale():
     #     order by (sale_uuid);
     # + после досоздать аксессоры через дипсик
 
+	# CREATE table if not exists dds.sale
+	# (
+	#   sale_uuid String
+	# , sale_date String
+	# , counterparty_uuid String
+	# , counterparty_salepoint_uuid String
+	# , product_uuid String
+	# , gtin_code String
+	# , series_code String
+	# , best_before_date String
+	# , type_of_disposal_name String
+	# , sale_sum int32
+	# , sale_cnt int32
+	# , source_of_financing_name String
+	# , update_date DateTime
+	# , type_of_export_name String
+	# , completeness_of_disposal_name String
+	# -- обязательные поля
+	# , effective_from_dttm DateTime
+	# , effective_to_dttm DateTime
+	# , processed_dttm DateTime
+	# , deleted_flg bool
+	# , src String
+	# , hash_diff String
+	# )
+	# ENGINE = MergeTree
+	# order by (sale_uuid, hash_diff)
+
     src_table_name = 'mart_dsm_stat_product'    #название таблицы источника
     tgt_table_name = 'dds.sale'              #название целевой таблицы НАДО СОЗДАТЬ ТАБЛИЦУ
     hub_table_name = 'dds.hub_sale'          #название таблицы Хаба
