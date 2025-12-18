@@ -86,8 +86,7 @@ def wf_app_dsm_stg_dds_sale():
 	# ENGINE = MergeTree
 	# order by (sale_uuid, hash_diff)
 
-    src_table_name = 'mart_dsm_stat_product'    #название таблицы источника
-    tgt_table_name = 'dds.sale'              #название целевой таблицы НАДО СОЗДАТЬ ТАБЛИЦУ
+	tgt_table_name = 'dds.sale'              #название целевой таблицы НАДО СОЗДАТЬ ТАБЛИЦУ
     hub_table_name = 'dds.hub_sale'          #название таблицы Хаба
     pk_list = ['mnn', 'address', 'date_of_disposal']                      #список полей PK источника
     pk_list_dds = ['sale_uuid']              #список полей PK таргета
@@ -135,29 +134,34 @@ def wf_app_dsm_stg_dds_sale():
             query = f"""
             CREATE TABLE {tmp_table_name} 
             ENGINE = MergeTree()
-            PRIMARY KEY (inn_code, address_name)
-            ORDER BY (inn_code, address_name)
+            PRIMARY KEY (mnn, address, date_of_disposal)
+            ORDER BY (mnn, address, date_of_disposal)
             AS 
             SELECT 
-                tin_of_the_participant as inn_code,
-                name_of_the_participant as counterparty_name,
-                code_of_the_subject_of_the_russian_federation as the_subject_code,
-                the_subject_of_the_russian_federation as the_subject_name,
-                settlement as settlement_name,
-                district as district_name,
-                trim(BOTH ', ' FROM 
-				        if(
-						        match(address, '^[0-9]{6},'),
-						        trimLeft(substring(address, position(address, ',') + 1)),
-						        address
-						    )
-				    )
-                 as address_name,
-                identifier_md_participant as md_system_code,
+                sale_uuid
+				sale_date
+				counterparty_uuid
+				counterparty_salepoint_uuid
+				product_uuid
+				gtin_code
+				series_code
+				best_before_date
+				type_of_disposal_name
+				sale_sum
+				sale_cnt
+				source_of_financing_name
+				update_date
+				type_of_export_name
+				completeness_of_disposal_name
+				processed_dttm
+				deleted_flg
+				src
+				hash_diff
+
                 'MDLP' as src,
                 toDateTime('1990-01-01 00:01:01') as effective_dttm,
                 1 as algorithm_type,
-                concat(toString(tin_of_the_participant), '^^', address_name) as salepoint_business_key
+                concat(mnn, '^^', address, '^^', date_of_disposal) as sale_business_key -- для ДСМ будет пустое значение?
             FROM stg.v_iv_mart_mdlp_general_report_on_disposal(p_from_dttm = '{p_version_prev}', p_to_dttm = '{p_version_new}')
             """
             
