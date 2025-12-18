@@ -10,14 +10,17 @@ def _get_dates_from_filename(path: str, loger) -> tuple[datetime, datetime]:
     try:
         filename = os.path.basename(path)
         date_part = os.path.splitext(filename)[0]
-        report_date = datetime.strptime(date_part, "%m_%Y")
+        try:
+            report_date = datetime.strptime(date_part, "%m_%Y")
+        except ValueError:
+            report_date = datetime.strptime(date_part, "%m.%Y")
         start_date = (report_date - relativedelta(months=2)).replace(day=1)
         _, last_day = calendar.monthrange(report_date.year, report_date.month)
         end_date = report_date.replace(day=last_day)
         loger.info(f"Определен период отчета по имени файла: {start_date.date()} - {end_date.date()}")
         return start_date, end_date
     except Exception as e:
-        loger.error(f"Не удалось определить дату из имени файла '{os.path.basename(path)}'. Ожидаемый формат: ММ_ГГГГ.xlsx. Ошибка: {e}")
+        loger.error(f"Не удалось определить дату из имени файла '{os.path.basename(path)}'. Ожидаемый формат: ММ_ГГГГ.xlsx или ММ.ГГГГ.xlsx. Ошибка: {e}")
         raise
 
 def _extract_base(path: str, name_report: str, name_pharm_chain: str, rename_map: dict) -> dict:
