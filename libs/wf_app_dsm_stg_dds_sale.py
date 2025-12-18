@@ -32,8 +32,10 @@ default_args = {
     catchup=False,
     tags=['advanced'],
     params = {
-        "p_version_prev": Param('2025-01-01 00:01:01', type = "string", title = "Processed_dttm прудыдущей выгрузки"),
-        "p_version_new": Param('2025-01-02 00:01:01', type = "string", title = "Processed_dttm новой выгрузки")
+        "p_version_prev": Param({'mart_mdlp_general_report_on_disposal':'2025-01-01',
+								'mart_dsm_stat_product': '2025-01-01 00:01:01'}, title = "Dict с create_dttm / Processed_dttm предыдущей выгрузки иточников"),
+        "p_version_new": Param({'mart_mdlp_general_report_on_disposal':'2025-01-01',
+								'mart_dsm_stat_product': '2025-01-02 00:01:01'}, title = "Dict с create_dttm / Processed_dttm новой выгрузки иточников")
     }
 )
 def wf_app_dsm_stg_dds_sale():
@@ -115,12 +117,12 @@ def wf_app_dsm_stg_dds_sale():
         else: 
             raise # МБ break?
     
-    # Алгоритм 1: mart_mdlp_general_report_on_disposal (полные данные участника)
+    # Получение данных из mdlp-источника: mart_mdlp_general_report_on_disposal (полные данные участника)
     @task
-    def get_inc_load_data(p_version: dict, name_src_tbl:str) -> str:
+    def get_inc_load_data_mdlp(p_version: dict, name_src_tbl:str) -> str:
         client = None
         logger = LoggingMixin().log
-        tmp_table_name = f"tmp.tmp_algo1_{tg_sur.uuid.uuid4().hex}"
+        tmp_table_name = f"tmp.tmp_mdlp_{tg_sur.uuid.uuid4().hex}"
         logger.info(f"получены параметры: {p_version}: {type(p_version)}")
         p_version_prev = p_version['p_version_prev'][name_src_tbl][:19]
         p_version_new = p_version['p_version_new'][name_src_tbl][:19]
@@ -173,6 +175,11 @@ def wf_app_dsm_stg_dds_sale():
                 client.disconnect()
                 logger.debug("Подключение к ClickHouse закрыто")
     
+	# Получение данных из dsm-источника: mart_mdlp_general_report_on_disposal (полные данные участника)
+	@task
+    def get_inc_load_data_mdlp(p_version: dict, name_src_tbl:str) -> str:
+		pass
+		
     @task
     def get_prepared_data(tmp_table: str, hub_table: str, src_pk:str,  hub_pk: str, hub_id: str) -> str:
         """Получение ключей из Hub"""
@@ -218,7 +225,14 @@ def wf_app_dsm_stg_dds_sale():
             if client:
                 client.disconnect()
                 logger.debug("Подключение к ClickHouse закрыто")
-    
+
+	# Параллельное выполнение всех алгоритмов
+	mdlp_task = get_inc_load_data_mdlp(parameters_task, name_src_tbl = 'mart_mdlp_general_report_on_disposal')
+	dsm_task = get_inc_load_data_dsm(parameters_task, name_src_tbl = 'mart_dsm_stat_product')
+	# Объединение результатов всех алгоритмов
+    union_table_task = union_all_algorithms(mdlp_task, dsm_task)
+
+	
     check_task = check_data_availability()
     parametrs_data_task = prepare_parameters(check_task)
     inc_table_task = get_inc_load_data(src_table_name,pk_list, bk_list, parametrs_data_task['p_version_prev'], parametrs_data_task['p_version_new'])
