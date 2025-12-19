@@ -29,6 +29,31 @@ def _get_dates_from_filename(path: str, logger) -> tuple[datetime, datetime]:
         logger.error(f"Ошибка при определении даты: {e}")
         raise
 
+def _parse_flat_sheet(df_raw, logger):
+    header_idx = -1
+    for i, row in df_raw.head(20).iterrows():
+        row_vals = [str(v).lower() for v in row.values]
+        if 'наименование' in row_vals and 'кол-во' in row_vals:
+            header_idx = i
+            break
+    
+    if header_idx == -1:
+        logger.warning("Не найден заголовок (Наименование, Кол-во) в листе")
+        return pd.DataFrame()
+
+    df_data = df_raw.iloc[header_idx+1:].copy()
+    df_data.columns = df_raw.iloc[header_idx]
+    
+    rename_map = {}
+    for c in df_data.columns:
+        c_str = str(c).lower()
+        if 'наименование' in c_str: rename_map[c] = 'product_name'
+        elif 'аптека' in c_str and 'адрес' in c_str: rename_map[c] = 'pharmacy_name'
+        elif 'кол-во' in c_str: rename_map[c] = 'quantity'
+    
+    df_data.rename(columns=rename_map, inplace=True)
+    return df_data
+
 def extract_fialka(path='', name_report='Закупки', name_pharm_chain='Фиалка') -> dict:
     """
     Парсер для отчетов аптеки 'Фиалка' (Закупки, Остатки, Продажи).
@@ -59,100 +84,114 @@ def extract_fialka(path='', name_report='Закупки', name_pharm_chain='Фи
             df_result = pd.DataFrame()
 
             if current_report == 'Закупки':
-                if not sheet_prihod:
-                    logger.warning(f"Не найден лист с ключевым словом 'приход' для отчета '{current_report}'")
-                    continue
-            
-            df_raw = pd.read_excel(path, sheet_name=sheet_prihod, header=None)
-            
-            try:
-                header_row_idx = df_raw[df_raw[0].astype(str).str.contains("Наименование", na=False, case=False)].index[0]
-            except IndexError:
-                raise ValueError("Не найдена строка заголовка с 'Наименование' в листе прихода")
+                if sheet_prihod:
+                    df_raw = pd.read_excel(path, sheet_name=sheet_prihod, header=None)
+                    
+                    try:
+                        header_row_idx = df_raw[df_raw[0].astype(str).str.contains("Наименование", na=False, case=False)].index[0]
+                    except IndexError:
+                        raise ValueError("Не найдена строка заголовка с 'Наименование' в листе прихода")
 
-            headers = df_raw.iloc[header_row_idx].astype(str)
-            df_data = df_raw.iloc[header_row_idx + 1:].copy()
-            df_data.columns = headers
+                    headers = df_raw.iloc[header_row_idx].astype(str)
+                    df_data = df_raw.iloc[header_row_idx + 1:].copy()
+                    df_data.columns = headers
 
-            df_data.rename(columns={headers[0]: 'product_name'}, inplace=True)
+                    df_data.rename(columns={headers[0]: 'product_name'}, inplace=True)
 
-            if not df_data.empty and 'общий итог' in str(df_data.iloc[-1]['product_name']).lower():
-                df_data = df_data.iloc[:-1]
+                    if not df_data.empty and 'общий итог' in str(df_data.iloc[-1]['product_name']).lower():
+                        df_data = df_data.iloc[:-1]
 
-            pharmacy_cols = [
-                c for c in df_data.columns 
-                if c not in ['product_name'] 
-                and 'итог' not in str(c).lower() 
-                and str(c).lower() != 'nan'
-            ]
+                    pharmacy_cols = [
+                        c for c in df_data.columns 
+                        if c not in ['product_name'] 
+                        and 'итог' not in str(c).lower() 
+                        and str(c).lower() != 'nan'
+                    ]
 
-            df_melted = df_data.melt(
-                id_vars=['product_name'], 
-                value_vars=pharmacy_cols,
-                var_name='pharmacy_name', 
-                value_name='quantity'
-            )
-            
-            df_result = df_melted
+                    df_result = df_data.melt(
+                        id_vars=['product_name'], 
+                        value_vars=pharmacy_cols,
+                        var_name='pharmacy_name', 
+                        value_name='quantity'
+                    )
+                else:
+                    sheet_zakup = next((s for s in sheet_names if 'закуп' in s.lower()), None)
+                    if sheet_zakup:
+                        logger.info(f"Используем лист '{sheet_zakup}' для отчета '{current_report}'")
+                        df_raw = pd.read_excel(path, sheet_name=sheet_zakup, header=None)
+                        df_result = _parse_flat_sheet(df_raw, logger)
+                    else:
+                        logger.warning(f"Не найден лист с ключевым словом 'приход' или 'закуп' для отчета '{current_report}'")
+                        continue
 
-            
-            df_raw = pd.read_excel(path, sheet_name=sheet_oborot, header=None)
+            elif current_report in ['Продажи', 'Остатки']:
+                if sheet_oborot:
+                    df_raw = pd.read_excel(path, sheet_name=sheet_oborot, header=None)
 
+                    try:
+                        sub_header_idx = df_raw[df_raw[0].astype(str).str.contains("Наименование", na=False, case=False)].index[0]
+                    except IndexError:
+                        raise ValueError("Не найдена строка заголовка с 'Наименование' в листе оборота")
+                    
+                    pharm_name_idx = sub_header_idx - 1
+                    
+                    pharm_row = df_raw.iloc[pharm_name_idx]
+                    sub_header_row = df_raw.iloc[sub_header_idx]
+                    
+                    data_start_idx = sub_header_idx + 1
+                    df_data = df_raw.iloc[data_start_idx:].copy()
 
-            try:
-                sub_header_idx = df_raw[df_raw[0].astype(str).str.contains("Наименование", na=False, case=False)].index[0]
-            except IndexError:
-                raise ValueError("Не найдена строка заголовка с 'Наименование' в листе оборота")
-            
-            pharm_name_idx = sub_header_idx - 1
-            
-            pharm_row = df_raw.iloc[pharm_name_idx]
-            sub_header_row = df_raw.iloc[sub_header_idx]
-            
-            data_start_idx = sub_header_idx + 1
-            df_data = df_raw.iloc[data_start_idx:].copy()
+                    if not df_data.empty and 'итог' in str(df_data.iloc[-1, 0]).lower():
+                        df_data = df_data.iloc[:-1]
 
-            if not df_data.empty and 'итог' in str(df_data.iloc[-1, 0]).lower():
-                df_data = df_data.iloc[:-1]
+                    records = []
+                    num_cols = df_raw.shape[1]
 
-            records = []
-            num_cols = df_raw.shape[1]
+                    for i in range(1, num_cols - 1, 2):
+                        pharm_name = pharm_row.iloc[i]
 
-            for i in range(1, num_cols - 1, 2):
-                pharm_name = pharm_row.iloc[i]
+                        header_1 = str(sub_header_row.iloc[i]).lower()
+                        header_2 = str(sub_header_row.iloc[i+1]).lower()
 
-                header_1 = str(sub_header_row.iloc[i]).lower()
-                header_2 = str(sub_header_row.iloc[i+1]).lower()
+                        if (pd.isna(pharm_name) or str(pharm_name).strip() == '' or 
+                            'итог' in str(pharm_name).lower() or 'итог' in header_1 or 'итог' in header_2):
+                            continue
 
-                if (pd.isna(pharm_name) or str(pharm_name).strip() == '' or 
-                    'итог' in str(pharm_name).lower() or 'итог' in header_1 or 'итог' in header_2):
-                    continue
+                        col_sales_idx = None
+                        col_stock_idx = None
+                        
+                        if 'оборот' in header_1: col_sales_idx = i
+                        elif 'оборот' in header_2: col_sales_idx = i+1
+                        
+                        if 'остаток' in header_1: col_stock_idx = i
+                        elif 'остаток' in header_2: col_stock_idx = i+1
 
-                col_sales_idx = None
-                col_stock_idx = None
-                
-                if 'оборот' in header_1: col_sales_idx = i
-                elif 'оборот' in header_2: col_sales_idx = i+1
-                
-                if 'остаток' in header_1: col_stock_idx = i
-                elif 'остаток' in header_2: col_stock_idx = i+1
+                        target_col_idx = None
+                        if current_report == 'Продажи':
+                            target_col_idx = col_sales_idx
+                        elif current_report == 'Остатки':
+                            target_col_idx = col_stock_idx
 
-                target_col_idx = None
-                if current_report == 'Продажи':
-                    target_col_idx = col_sales_idx
-                elif current_report == 'Остатки':
-                    target_col_idx = col_stock_idx
+                        if target_col_idx is not None:
+                            chunk = df_data[[0, target_col_idx]].copy()
+                            chunk.columns = ['product_name', 'quantity']
+                            chunk['pharmacy_name'] = pharm_name
+                            records.append(chunk)
 
-                if target_col_idx is not None:
-                    chunk = df_data[[0, target_col_idx]].copy()
-                    chunk.columns = ['product_name', 'quantity']
-                    chunk['pharmacy_name'] = pharm_name
-                    records.append(chunk)
-
-            if records:
-                df_result = pd.concat(records, ignore_index=True)
-            else:
-                logger.warning("Не удалось извлечь данные по аптекам (пустой список records).")
+                    if records:
+                        df_result = pd.concat(records, ignore_index=True)
+                    else:
+                        logger.warning("Не удалось извлечь данные по аптекам (пустой список records).")
+                else:
+                    keyword = 'продаж' if current_report == 'Продажи' else 'остат'
+                    sheet_flat = next((s for s in sheet_names if keyword in s.lower()), None)
+                    if sheet_flat:
+                        logger.info(f"Используем лист '{sheet_flat}' для отчета '{current_report}'")
+                        df_raw = pd.read_excel(path, sheet_name=sheet_flat, header=None)
+                        df_result = _parse_flat_sheet(df_raw, logger)
+                    else:
+                        logger.warning(f"Не найден лист с ключевым словом 'оборот' или '{keyword}' для отчета '{current_report}'")
+                        continue
 
             if not df_result.empty:
                 df_result['quantity'] = pd.to_numeric(df_result['quantity'], errors='coerce').fillna(0)
@@ -195,7 +234,7 @@ def extract_fialka(path='', name_report='Закупки', name_pharm_chain='Фи
 
 if __name__ == "__main__":
     main_loger = LoggingMixin().log
-    test_file_path = r'c:\Users\nmankov\Desktop\отчеты\Фиалка\Закуп Продажи Остатки\2024\06_2024.xlsx' 
+    test_file_path = r'c:\Users\nmankov\Desktop\отчеты\Фиалка\Закуп Продажи Остатки\2023\12_2023.xlsx' 
     
     if os.path.exists(test_file_path):
         main_loger.info(f"Запуск локального теста для файла: {test_file_path}")
