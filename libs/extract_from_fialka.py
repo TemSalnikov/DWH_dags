@@ -47,11 +47,21 @@ def extract_fialka(path='', name_report='Закупки', name_pharm_chain='Фи
         sheet_prihod = next((s for s in sheet_names if 'приход' in s.lower()), None)
         sheet_oborot = next((s for s in sheet_names if 'оборот' in s.lower()), None)
 
-        df_result = pd.DataFrame()
+        all_dfs = []
+        reports_to_process = []
+        
+        if 'Закуп_Продажи_Остатки' in name_report:
+            reports_to_process = ['Закупки', 'Продажи', 'Остатки']
+        else:
+            reports_to_process = [name_report]
 
-        if name_report == 'Закупки':
-            if not sheet_prihod:
-                raise ValueError(f"Не найден лист с ключевым словом 'приход' для отчета '{name_report}'")
+        for current_report in reports_to_process:
+            df_result = pd.DataFrame()
+
+            if current_report == 'Закупки':
+                if not sheet_prihod:
+                    logger.warning(f"Не найден лист с ключевым словом 'приход' для отчета '{current_report}'")
+                    continue
             
             df_raw = pd.read_excel(path, sheet_name=sheet_prihod, header=None)
             
@@ -85,9 +95,10 @@ def extract_fialka(path='', name_report='Закупки', name_pharm_chain='Фи
             
             df_result = df_melted
 
-        elif name_report in ['Продажи', 'Остатки']:
-            if not sheet_oborot:
-                raise ValueError(f"Не найден лист с ключевым словом 'оборот' для отчета '{name_report}'")
+            elif current_report in ['Продажи', 'Остатки']:
+                if not sheet_oborot:
+                    logger.warning(f"Не найден лист с ключевым словом 'оборот' для отчета '{current_report}'")
+                    continue
             
             df_raw = pd.read_excel(path, sheet_name=sheet_oborot, header=None)
 
@@ -131,9 +142,9 @@ def extract_fialka(path='', name_report='Закупки', name_pharm_chain='Фи
                 elif 'остаток' in header_2: col_stock_idx = i+1
 
                 target_col_idx = None
-                if name_report == 'Продажи':
+                if current_report == 'Продажи':
                     target_col_idx = col_sales_idx
-                elif name_report == 'Остатки':
+                elif current_report == 'Остатки':
                     target_col_idx = col_stock_idx
 
                 if target_col_idx is not None:
@@ -147,36 +158,44 @@ def extract_fialka(path='', name_report='Закупки', name_pharm_chain='Фи
             else:
                 logger.warning("Не удалось извлечь данные по аптекам (пустой список records).")
 
-        else:
-            raise ValueError(f"Неизвестный тип отчета: {name_report}")
+            else:
+                logger.warning(f"Неизвестный тип отчета: {current_report}")
+                continue
 
-        if not df_result.empty:
-            df_result['quantity'] = pd.to_numeric(df_result['quantity'], errors='coerce').fillna(0)
-            
-            df_result = df_result[df_result['quantity'] != 0]
-            
-            df_result.reset_index(drop=True, inplace=True)
+            if not df_result.empty:
+                df_result['quantity'] = pd.to_numeric(df_result['quantity'], errors='coerce').fillna(0)
+                
+                df_result = df_result[df_result['quantity'] != 0]
+                
+                df_result.reset_index(drop=True, inplace=True)
 
-            df_result['uuid_report'] = [str(uuid.uuid4()) for _ in range(len(df_result))]
-            df_result['name_report'] = name_report
-            df_result['name_pharm_chain'] = name_pharm_chain
-            df_result['start_date'] = start_date.strftime('%Y-%m-%d %H:%M:%S')
-            df_result['end_date'] = end_date.strftime('%Y-%m-%d %H:%M:%S')
-            df_result['processed_dttm'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                df_result['uuid_report'] = [str(uuid.uuid4()) for _ in range(len(df_result))]
+                df_result['name_report'] = current_report
+                df_result['name_pharm_chain'] = name_pharm_chain
+                df_result['start_date'] = start_date.strftime('%Y-%m-%d %H:%M:%S')
+                df_result['end_date'] = end_date.strftime('%Y-%m-%d %H:%M:%S')
+                df_result['processed_dttm'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-            final_columns = [
-                'uuid_report', 'product_name', 'pharmacy_name', 'quantity', 'name_report', 'name_pharm_chain', 'start_date', 'end_date', 'processed_dttm'
-            ]
-            
-            for col in final_columns:
-                if col not in df_result.columns:
-                    df_result[col] = None
-            
-            df_result = df_result[final_columns]
-            df_result = df_result.replace({pd.NA: None, float('nan'): None})
+                final_columns = [
+                    'uuid_report', 'product_name', 'pharmacy_name', 'quantity', 'name_report', 'name_pharm_chain', 'start_date', 'end_date', 'processed_dttm'
+                ]
+                
+                for col in final_columns:
+                    if col not in df_result.columns:
+                        df_result[col] = None
+                
+                df_result = df_result[final_columns]
+                df_result = df_result.replace({pd.NA: None, float('nan'): None})
+                
+                all_dfs.append(df_result)
 
-        logger.info(f"Парсинг завершен. Получено строк: {len(df_result)}")
-        return {'table_report': df_result}
+        if not all_dfs:
+            logger.warning("Не удалось сформировать данные ни по одному из типов отчетов.")
+            return {'table_report': pd.DataFrame()}
+
+        final_df = pd.concat(all_dfs, ignore_index=True)
+        logger.info(f"Парсинг завершен. Получено строк: {len(final_df)}")
+        return {'table_report': final_df}
 
     except Exception as e:
         logger.error(f"Ошибка при парсинге отчета '{name_report}' для '{name_pharm_chain}': {e}", exc_info=True)
@@ -187,26 +206,21 @@ if __name__ == "__main__":
     test_file_path = r'c:\Users\nmankov\Desktop\отчеты\Фиалка\Закуп Продажи Остатки\2024\06_2024.xlsx' 
     
     if os.path.exists(test_file_path):
-        all_results = []
-        for test_report_type in ['Закупки', 'Продажи', 'Остатки']:
-            main_loger.info(f"Запуск локального теста для типа: {test_report_type}")
-            try:
-                result_data = extract_fialka(path=test_file_path, name_report=test_report_type)
-                df_res = result_data.get('table_report')
-                
-                if df_res is not None and not df_res.empty:
-                    all_results.append(df_res)
-                else:
-                    main_loger.warning(f"Пустой результат для {test_report_type}")
-            except Exception as e:
-                main_loger.error(f"Ошибка: {e}", exc_info=True)
-        
-        if all_results:
-            final_df = pd.concat(all_results, ignore_index=True)
-            output_path = os.path.join(os.path.dirname(test_file_path), f"{os.path.splitext(os.path.basename(test_file_path))[0]}_result.csv")
-            final_df.to_csv(output_path, sep=';', index=False, encoding='utf-8-sig')
-            main_loger.info(f"Общий результат успешно сохранен в: {output_path}")
-            print(f"Всего строк в общем файле: {len(final_df)}")
-            print(final_df.head().to_string())
+        main_loger.info(f"Запуск локального теста для файла: {test_file_path}")
+        try:
+            result_data = extract_fialka(path=test_file_path, name_report='Закуп_Продажи_Остатки')
+            df_res = result_data.get('table_report')
+            
+            if df_res is not None and not df_res.empty:
+                output_path = os.path.join(os.path.dirname(test_file_path), f"{os.path.splitext(os.path.basename(test_file_path))[0]}_result.csv")
+                df_res.to_csv(output_path, sep=';', index=False, encoding='utf-8-sig')
+                main_loger.info(f"Общий результат успешно сохранен в: {output_path}")
+                print(f"Всего строк в общем файле: {len(df_res)}")
+                print(df_res.head().to_string())
+                print(df_res['name_report'].value_counts())
+            else:
+                main_loger.warning(f"Пустой результат")
+        except Exception as e:
+            main_loger.error(f"Ошибка: {e}", exc_info=True)
     else:
-            main_loger.warning("Не удалось получить данные ни по одному из отчетов.")
+        main_loger.warning("Не удалось получить данные ни по одному из отчетов.")
