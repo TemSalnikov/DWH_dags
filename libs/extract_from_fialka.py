@@ -95,10 +95,6 @@ def extract_fialka(path='', name_report='Закупки', name_pharm_chain='Фи
             
             df_result = df_melted
 
-            elif current_report in ['Продажи', 'Остатки']:
-                if not sheet_oborot:
-                    logger.warning(f"Не найден лист с ключевым словом 'оборот' для отчета '{current_report}'")
-                    continue
             
             df_raw = pd.read_excel(path, sheet_name=sheet_oborot, header=None)
 
@@ -157,10 +153,6 @@ def extract_fialka(path='', name_report='Закупки', name_pharm_chain='Фи
                 df_result = pd.concat(records, ignore_index=True)
             else:
                 logger.warning("Не удалось извлечь данные по аптекам (пустой список records).")
-
-            else:
-                logger.warning(f"Неизвестный тип отчета: {current_report}")
-                continue
 
             if not df_result.empty:
                 df_result['quantity'] = pd.to_numeric(df_result['quantity'], errors='coerce').fillna(0)
