@@ -1,5 +1,4 @@
 --drop table stg.mart_fpc_fialka_report on cluster cluster_2S_2R
-                'uuid_report', 'product_name', 'pharmacy_name', 'quantity', 'name_report', 'name_pharm_chain', 'start_date', 'end_date', 'processed_dttm'
 
 create table stg.mart_fpc_fialka_report on cluster cluster_2S_2R
 (
