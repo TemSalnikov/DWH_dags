@@ -75,11 +75,11 @@ def wf_xls_kafka_dict_pharm_chains():
         algo_id = str(_dag_id).split(':')[1].strip().strip('>')[3:]
         loger.info(f'Успешно получено algo_id {algo_id}!')
         if call_producer(extract_xls,
-                                configs[algo_id]['directory']+'/'+configs[algo_id]['name_report'],
-                                configs[algo_id]['name_report'],
-                                configs[algo_id]['name_pharm_chain'],
-                                configs[algo_id]['prefix_topic']):
-            loger.info(f'Успешно записаны данные {configs[algo_id]['name_report']}')
+                                configs['directory']+'/'+configs['name_report'],
+                                configs['name_report'],
+                                configs['name_pharm_chain'],
+                                configs['prefix_topic']):
+            loger.info(f'Успешно записаны данные {configs['name_report']}')
             # write_meta_file(
             #     # configs[algo_id]['db_config'], 
             #     configs[algo_id]['directory'],folder,file)
