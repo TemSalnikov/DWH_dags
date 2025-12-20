@@ -79,7 +79,8 @@ def wf_xls_kafka_dict_pharm_chains():
                                 configs['name_report'],
                                 configs['name_pharm_chain'],
                                 configs['prefix_topic']):
-            loger.info(f'Успешно записаны данные {configs['name_report']}')
+            name_rep = configs['name_report']
+            loger.info(f'Успешно записаны данные {name_rep}')
             # write_meta_file(
             #     # configs[algo_id]['db_config'], 
             #     configs[algo_id]['directory'],folder,file)
