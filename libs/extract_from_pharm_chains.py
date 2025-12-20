@@ -39,7 +39,7 @@ def table_conversion(df: pd.DataFrame, name_pharm_chain='', sheet_name=''):
         
         # Переименовываем колонки для единообразия
         result.columns = ['inn', 'legal_name', 'brand']
-        result = result.dropna()
+        result = result.replace("nan", '')
         # Добавляем идентификаторы и метаданные
         result['uuid_report'] = [str(uuid.uuid4()) for _ in range(len(result))]
         result['processed_dttm'] = [str(datetime.now()) for _ in range(len(result))]
