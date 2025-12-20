@@ -31,7 +31,7 @@ default_args = {
     default_args=default_args,
     schedule_interval=None,
     catchup=False,
-    params = {'directory': '/opt/airflow/data/reports/',
+    params = {'directory': '/opt/airflow/data',
             'name_report': 'Прямые сети ИНН 4 кв 2025_СВОД_ФИНАЛ_с ассоциациями_.xlsx',
             'name_pharm_chain': '',
             'prefix_topic': 'dict_ptharm_chain'
