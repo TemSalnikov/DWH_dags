@@ -39,6 +39,9 @@ def table_conversion(df: pd.DataFrame, name_pharm_chain='', sheet_name=''):
         
         # Переименовываем колонки для единообразия
         result.columns = ['inn', 'legal_name', 'brand']
+        result['inn'] = pd.to_numeric(result['inn'], errors='coerce')
+        result = result.dropna(subset=['inn'])
+        result['inn'] = result['inn'].astype(int)
         result = result.replace("nan", '')
         # Добавляем идентификаторы и метаданные
         result['uuid_report'] = [str(uuid.uuid4()) for _ in range(len(result))]
