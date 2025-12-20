@@ -9,7 +9,7 @@ project_path = os.path.dirname(script_path)+'/libs'
 sys.path.append(project_path)
 
 from kafka_producer_common_for_xls import call_producer
-from extract_from_parm_chains import extract_xls
+from extract_from_pharm_chains import extract_xls
 
 
 default_args = {
