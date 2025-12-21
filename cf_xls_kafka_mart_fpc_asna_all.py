@@ -31,7 +31,7 @@ default_args = {
     default_args=default_args,
     schedule_interval=None,
     catchup=False,
-    params = {'directory': '/opt/airflow/data/reports/АСНА/Закуп Продажи/',
+    params = {'directory': '/opt/airflow/data/АСНА/Закуп Продажи/',
               'name_report': 'Закуп_Продажи',
               'name_pharm_chain': 'Асна',
               'prefix_topic': 'fpc_asna'
