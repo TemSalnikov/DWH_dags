@@ -30,7 +30,7 @@ default_args = {
     default_args=default_args,
     schedule_interval=None,
     catchup=False,
-    params = {'directory': '/opt/airflow/data/reports/Фармпомощь Бийск/Продажи -Остатки/',
+    params = {'directory': '/opt/airflow/data/Фармпомощь Бийск/Продажи -Остатки/',
               'name_report': 'Продажи_Остатки',
               'name_pharm_chain': 'Фармпомощь Бийск',
               'prefix_topic': 'fpc_farmpomosch_biysk'
@@ -51,7 +51,10 @@ def cf_xls_kafka_mart_fpc_farmpomosch_biysk_sales_remains():
 
     @task
     def get_folders(parametrs:Dict)-> Optional[list]:
-        return file_processing.get_list_folders(parametrs['directory'])
+        folders = file_processing.get_list_folders(parametrs['directory'])
+        if not folders:
+            return ['']
+        return folders
 
     @task
     def get_files(parametrs:Dict, folders:list)-> Optional[dict]:
