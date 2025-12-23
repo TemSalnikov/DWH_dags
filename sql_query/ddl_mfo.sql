@@ -1,9 +1,4 @@
 --drop table stg.mart_fpc_mfo_report on cluster cluster_2S_2R
-   'uuid_report','period_date', 'partner_code', 'client_name', 'legal_entity', 'region', 'city',
-            'shipping_address', 'full_address', 'pharmacy_inn', 'mfo_supplier',
-            'counted_db', 'customer', 'product_name', 'product_group',
-            'distribution','purchase_quantity',  'purchase_amount', 'sale_quantity',
-            'stock_quantity', 'invoice_number', 'invoice_date', 'name_report', 'name_pharm_chain', 'start_date', 'end_date', 'processed_dttm',
     
 create table stg.mart_fpc_mfo_report on cluster cluster_2S_2R
 (
