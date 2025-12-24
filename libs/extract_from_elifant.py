@@ -215,6 +215,9 @@ def extract_elifant_report(path, name_report, name_pharm_chain) -> dict:
             if col not in df_result.columns:
                 df_result[col] = None
         df_result = df_result[FINAL_COLUMNS]
+        df_result = df_result.astype(object)
+        df_result = df_result.replace({'nan': None, 'None': None, '': None})
+        df_result = df_result.where(pd.notnull(df_result), None)
         loger.info(f"Успешно обработано {len(df_result)} строк.")
 
     return {
