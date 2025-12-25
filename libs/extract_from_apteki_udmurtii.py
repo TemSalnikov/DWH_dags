@@ -9,7 +9,6 @@ def _get_dates_from_filename(path: str, loger) -> tuple[datetime, datetime]:
     try:
         filename = os.path.basename(path)
         date_part = os.path.splitext(filename)[0]
-        # Ожидаемый формат имени файла: ММ_ГГГГ (как в магните)
         report_date = datetime.strptime(date_part, "%m_%Y")
         start_date = report_date.replace(day=1)
         _, last_day = calendar.monthrange(report_date.year, report_date.month)
@@ -18,7 +17,6 @@ def _get_dates_from_filename(path: str, loger) -> tuple[datetime, datetime]:
         return start_date, end_date
     except Exception as e:
         loger.error(f"Не удалось определить дату из имени файла '{os.path.basename(path)}'. Ошибка: {e}")
-        # Возвращаем текущий месяц как заглушку
         now = datetime.now()
         return now.replace(day=1), now
 
@@ -136,9 +134,6 @@ def extract_purchases_and_sales(path: str, name_report: str, name_pharm_chain: s
     return _extract_base(path, name_report, name_pharm_chain, rename_map)
 
 def extract_xls(path, name_report, name_pharm_chain) -> dict:
-    """
-    Диспетчер для 'Аптеки Удмуртии (Госаптека)'.
-    """
     loger = LoggingMixin().log
     loger.info(f"Диспетчер 'Аптеки Удмуртии' получил задачу: '{name_report}' для '{name_pharm_chain}' из файла '{path}'")
 
@@ -153,7 +148,6 @@ def extract_xls(path, name_report, name_pharm_chain) -> dict:
 if __name__ == "__main__":
     main_loger = LoggingMixin().log
     main_loger.info("Запуск локального теста для парсера 'Аптеки Удмуртии (Госаптека)'.")
-    # Укажите путь к тестовому файлу
     test_file_path = r'c:\Users\nmankov\Desktop\отчеты_аптек\Аптеки удмуртии(Госаптека)\Закуп+продажи\05_2025.xlsx'
     test_report_type = 'Закуп+Продажи'
 
