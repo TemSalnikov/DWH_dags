@@ -52,7 +52,10 @@ def cf_xls_kafka_mart_fpc_apteki_udmurtii_custom():
 
     @task
     def get_folders(parametrs:Dict)-> Optional[list]:
-        return file_processing.get_list_folders(parametrs['directory'])
+        folders = file_processing.get_list_folders(parametrs['directory'])
+        if not folders:
+            return ['.']
+        return folders
 
     @task
     def get_files(parametrs:Dict, folders:list)-> Optional[dict]:
