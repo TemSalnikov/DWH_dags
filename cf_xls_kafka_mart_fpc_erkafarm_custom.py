@@ -31,7 +31,7 @@ default_args = {
     default_args=default_args,
     schedule_interval=None,
     catchup=False,
-    params = {'directory': '/opt/airflow/data/Эркафарм/Закуп-остатки-продажи/',
+    params = {'directory': '/opt/airflow/Эркафарм/Закуп-остатки-продажи/',
               'name_report': 'Закуп-остатки-продажи',
               'name_pharm_chain': 'Эркафарм',
               'prefix_topic': 'fpc_erkafarm'
