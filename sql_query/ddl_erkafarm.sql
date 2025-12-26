@@ -1,25 +1,5 @@
 --drop table stg.mart_fpc_erkafarm_report on cluster cluster_2S_2R
-    'uuid_report',  
-    'product_name', 
-    'pharmacy_name', 
-    'pharmacy_id', 
-    'pharmacy_inn',         
-    'pharmacy_address', 
-    'pharmacy_city', 
-    'pharmacy_jur_person', 
-    'supplier_name',     
-    'product_code_ap',      
-    'product_code_2005',
-    'purchase_price',      
-    'row_sum_up',           
-    'row_sum_cond_price',   
-    'retail',              
-    'quantity', 
-    'name_pharm_chain', 
-    'name_report',         
-    'start_date', 
-    'end_date', 
-    'processed_dttm'
+
 create table stg.mart_fpc_erkafarm_report on cluster cluster_2S_2R
 (
     uuid_report text,
