@@ -30,7 +30,7 @@ default_args = {
     default_args=default_args,
     schedule_interval=None,
     catchup=False,
-    params = {'directory': '/opt/airflow/data/Юнифарм/Закуп/',
+    params = {'directory': '/opt/airflow/data/Юнифарм/закуп/',
               'name_report': 'Закупки',
               'name_pharm_chain': 'Юнифарм',
               'prefix_topic': 'fpc_unipharm'
@@ -52,7 +52,10 @@ def cf_xls_kafka_mart_fpc_unipharm_custom():
 
     @task
     def get_folders(parametrs:Dict)-> Optional[list]:
-        return file_processing.get_list_folders(parametrs['directory'])
+        folders = file_processing.get_list_folders(parametrs['directory'])
+        if not folders:
+            return ['']
+        return folders
 
     @task
     def get_files(parametrs:Dict, folders:list)-> Optional[dict]:
