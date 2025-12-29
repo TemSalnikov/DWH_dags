@@ -25,20 +25,19 @@ default_args = {
     'provide_context': True
 }
 
-
 @dag(
-    dag_id='cf_xls_kafka_mart_fpc_erkafarm_custom',
+    dag_id='cf_xls_kafka_mart_fpc_unipharm_custom',
     default_args=default_args,
     schedule_interval=None,
     catchup=False,
-    params = {'directory': '/opt/airflow/data/Эркафарм/Закуп-остатки-продажи/',
-              'name_report': 'Закуп-остатки-продажи',
-              'name_pharm_chain': 'Эркафарм',
-              'prefix_topic': 'fpc_erkafarm'
+    params = {'directory': '/opt/airflow/data/Юнифарм/Закуп/',
+              'name_report': 'Закупки',
+              'name_pharm_chain': 'Юнифарм',
+              'prefix_topic': 'fpc_unipharm'
             },
-    tags=['advanced', 'erkafarm']
+    tags=['advanced', 'unipharm']
 )
-def cf_xls_kafka_mart_fpc_erkafarm_custom():
+def cf_xls_kafka_mart_fpc_unipharm_custom():
     @task
     def check_data_availability() -> bool:
         return True
@@ -71,8 +70,7 @@ def cf_xls_kafka_mart_fpc_erkafarm_custom():
         query = f"""select name_folder from files.folders c
                 join files.directories d on c.id_dir = d.id_dir and d.name_dir = '{parametrs['directory']}'"""
         loger.info(f'Сформирован запрос: {query}')
-        folders = file_processing.get_meta_data(
-            query)
+        folders = file_processing.get_meta_data(query)
         loger.info(f'Получен перечень папок: {folders}')
         return folders
 
@@ -86,8 +84,7 @@ def cf_xls_kafka_mart_fpc_erkafarm_custom():
                         join files.folders c on f.id_folder = c.id_folder and c.name_folder = '{folder}'
                         join files.directories d on c.id_dir = d.id_dir and d.name_dir = '{parametrs['directory']}' """
             loger.info(f'Сформирован запрос: {query}')
-            files[folder] = file_processing.get_meta_data(
-                query)
+            files[folder] = file_processing.get_meta_data(query)
             loger.info(f'Получен перечень файлов: {files}')
         return files
 
@@ -112,7 +109,8 @@ def cf_xls_kafka_mart_fpc_erkafarm_custom():
         from airflow.api.common.trigger_dag import trigger_dag
         if processing_files:
             parametrs['files'] = processing_files
-            _dag_id = context["dag"].dag_id
+            _dag_id = context["dag"] if "dag" in context else ''
+            _dag_id = str(_dag_id).split(':')[1].strip().strip('>')
             loger.info(f'Успешно получено dag_id {_dag_id}!')
             result = trigger_dag(
                 dag_id='wf'+ _dag_id[2:],
@@ -137,4 +135,4 @@ def cf_xls_kafka_mart_fpc_erkafarm_custom():
     processing_files = get_files_for_processing(processinf_folders, meta_files, files)
     trigger_or_skip(parametrs, processing_files)
 
-cf_xls_kafka_mart_fpc_erkafarm_custom()
+cf_xls_kafka_mart_fpc_unipharm_custom()
