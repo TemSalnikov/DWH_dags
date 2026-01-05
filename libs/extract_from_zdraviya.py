@@ -87,7 +87,7 @@ def extract_xls(path, name_report, name_pharm_chain) -> dict:
                 numeric_df = df[cols].apply(pd.to_numeric, errors='coerce')
                 df[target_col] = numeric_df.sum(axis=1, min_count=1)
             else:
-                df[target_col] = pd.NA
+                df[target_col] = None
 
         df = df[(df['purchase_quantity'].fillna(0) != 0) | (df['sale_quantity'].fillna(0) != 0) | (df['stock_quantity'].fillna(0) != 0)]
 
@@ -109,7 +109,7 @@ def extract_xls(path, name_report, name_pharm_chain) -> dict:
                 df_final[col] = None
 
         df_report = df_final[FINAL_COLUMNS]
-        df_report = df_report.replace({pd.NA: None, pd.NaT: None, '': None, 'nan': None})
+        df_report = df_report.replace({pd.NA: None, pd.NaT: None, float('nan'): None, '': None, 'nan': None})
         df_report = df_report.where(pd.notna(df_report), None)
 
         loger.info(f"Парсинг отчета '{name_report}' завершен. Строк: {len(df_report)}")
