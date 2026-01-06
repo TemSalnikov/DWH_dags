@@ -30,7 +30,7 @@ default_args = {
     default_args=default_args,
     schedule_interval=None,
     catchup=False,
-    params = {'directory': '/opt/airflow/data/Здравсити/продажи/',
+    params = {'directory': '/opt/airflow/data/Здравсити/Продажи/',
               'name_report': 'Продажи',
               'name_pharm_chain': 'Здравсити',
               'prefix_topic': 'fpc_zdravcity'
