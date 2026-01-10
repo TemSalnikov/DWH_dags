@@ -30,7 +30,7 @@ default_args = {
     default_args=default_args,
     schedule_interval=None,
     catchup=False,
-    params = {'directory': '/opt/airflow/data/Семейная аптека (ИП Немчинов)/Закуп/',
+    params = {'directory': '/opt/airflow/data/Семейная аптека (ИП Немчинов)/закупки/',
               'name_report': 'Закупки',
               'name_pharm_chain': 'Семейная аптека',
               'prefix_topic': 'fpc_semejnaya_apteka'
