@@ -179,3 +179,26 @@ def extract_xls(path, name_report, name_pharm_chain) -> dict:
     else:
         loger.warning(f"Неизвестный тип отчета для 'Семейная аптека': '{name_report}'. Парсер не будет вызван.")
         return {}
+
+if __name__ == "__main__":
+    main_loger = LoggingMixin().log
+    main_loger.info("Запуск локального теста для парсера 'Семейная аптека'.")
+    test_file_path = r'c:\Users\nmankov\Desktop\отчеты_аптек\Семейная аптека (ИП Немчинов)\продажи, остатки\05_2025.xls'
+    test_report_type = 'Продажи'
+
+    if os.path.exists(test_file_path):
+        main_loger.info(f"Тестовый файл найден: {test_file_path}")
+        try:
+            result = extract_xls(path=test_file_path, name_report=test_report_type, name_pharm_chain='Семейная аптека')
+            df = result.get('table_report')
+            if df is not None and not df.empty:
+                output_filename = f"{os.path.splitext(os.path.basename(test_file_path))[0]}_result.csv"
+                output_path = os.path.join(os.path.dirname(test_file_path), output_filename)
+                df.to_csv(output_path, sep=';', index=False, encoding='utf-8-sig')
+                main_loger.info(f"Результат успешно сохранен в: {output_path}")
+            else:
+                main_loger.info("Результат пустой.")
+        except Exception as e:
+            main_loger.error(f"Во время локального теста произошла ошибка: {e}", exc_info=True)
+    else:
+        main_loger.warning(f"Тестовый файл не найден по пути: {test_file_path}")
