@@ -478,6 +478,9 @@ def extract_remains(path: str, name_report: str, name_pharm_chain: str) -> dict:
 
 def extract_xls(path, name_report, name_pharm_chain) -> dict:
     loger = LoggingMixin().log
+    if os.path.basename(path).lower() == 'thumbs.db':
+        return {}
+
     loger.info(f"Диспетчер 'Фармгарант' получил задачу: '{name_report}' для '{name_pharm_chain}' из файла '{path}'")
 
     report_type_lower = name_report.lower()

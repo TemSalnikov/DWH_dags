@@ -30,7 +30,7 @@ default_args = {
     default_args=default_args,
     schedule_interval=None,
     catchup=False,
-    params = {'directory': '/opt/airflow/data/reports/Фармгарант/Закуп/',
+    params = {'directory': '/opt/airflow/data/Фармгарант/Закуп/',
               'name_report': 'Закупки',
               'name_pharm_chain': 'Фармгарант',
               'prefix_topic': 'fpc_farmgarant'
