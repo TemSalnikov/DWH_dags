@@ -50,18 +50,33 @@ def _extract_base(path: str, name_report: str, name_pharm_chain: str, rename_map
             start_date = start_date - relativedelta(months=2)
             loger.info(f"Скорректирована дата начала для отчета 'Остатки': {start_date.date()}")
         
-        xls = pd.ExcelFile(path)
-        sheet_names = xls.sheet_names
-        target_sheet = sheet_names[0]
+        if path.lower().endswith('.csv'):
+            try:
+                df_raw = pd.read_csv(path, header=None, dtype=str, sep=';')
+            except UnicodeDecodeError:
+                try:
+                    df_raw = pd.read_csv(path, header=None, dtype=str, sep=';', encoding='cp1251')
+                except Exception:
+                    df_raw = pd.read_csv(path, header=None, dtype=str, encoding='cp1251')
+            except Exception:
+                df_raw = pd.read_csv(path, header=None, dtype=str)
+                try:
+                    df_raw = pd.read_csv(path, header=None, dtype=str)
+                except UnicodeDecodeError:
+                    df_raw = pd.read_csv(path, header=None, dtype=str, encoding='cp1251')
+        else:
+            xls = pd.ExcelFile(path)
+            sheet_names = xls.sheet_names
+            target_sheet = sheet_names[0]
 
-        if len(sheet_names) > 1:
-            data_sheet = next((s for s in sheet_names if s.lower() == 'данные'), None)
-            if data_sheet:
-                target_sheet = data_sheet
-            else:
-                loger.warning(f"В файле несколько листов {sheet_names}, но лист 'данные' не найден. Используем первый лист.")
-        
-        df_raw = pd.read_excel(xls, sheet_name=target_sheet, header=None, dtype=str)
+            if len(sheet_names) > 1:
+                data_sheet = next((s for s in sheet_names if s.lower() == 'данные'), None)
+                if data_sheet:
+                    target_sheet = data_sheet
+                else:
+                    loger.warning(f"В файле несколько листов {sheet_names}, но лист 'данные' не найден. Используем первый лист.")
+            
+            df_raw = pd.read_excel(xls, sheet_name=target_sheet, header=None, dtype=str)
         
         header_row_index = -1
         anchors = [anchor] if isinstance(anchor, str) else anchor
@@ -168,8 +183,8 @@ if __name__ == "__main__":
     main_loger = LoggingMixin().log
     main_loger.info("Запуск локального теста для парсера 'Апрель'.")
     
-    test_file_path = r'c:\Users\nmankov\Desktop\отчеты_аптек\Апрель\Закуп\2024\10_2024.xlsx'
-    test_report_type = 'Закупки'
+    test_file_path = r'c:\Users\nmankov\Desktop\отчеты_аптек\Апрель\Продажи\2024\07_2024.csv'
+    test_report_type = 'Продажи'
     pharm_chain_name = 'Апрель'
 
     main_loger.info(f"Тестовый файл: {test_file_path}")
