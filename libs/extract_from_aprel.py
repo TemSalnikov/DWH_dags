@@ -119,7 +119,7 @@ def extract_purchases(path: str, name_report: str, name_pharm_chain: str) -> dic
         'Накладная': 'invoice_number',
         'Дата накладной': 'invoice_date'
     }
-    return _extract_base(path, name_report, name_pharm_chain, rename_map, anchor='Наименование товара')
+    return _extract_base(path, name_report, name_pharm_chain, rename_map, anchor=['Наименование товара', 'Наименование поставщика'])
 
 def extract_sales(path: str, name_report: str, name_pharm_chain: str) -> dict:
     rename_map = {
@@ -168,7 +168,7 @@ if __name__ == "__main__":
     main_loger = LoggingMixin().log
     main_loger.info("Запуск локального теста для парсера 'Апрель'.")
     
-    test_file_path = r'c:\Users\nmankov\Desktop\отчеты_аптек\Апрель\Закуп\2024\04_2024.xlsx'
+    test_file_path = r'c:\Users\nmankov\Desktop\отчеты_аптек\Апрель\Закуп\2024\10_2024.xlsx'
     test_report_type = 'Закупки'
     pharm_chain_name = 'Апрель'
 
