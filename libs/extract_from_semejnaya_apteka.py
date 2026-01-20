@@ -170,6 +170,19 @@ def extract_xls(path, name_report, name_pharm_chain) -> dict:
     loger = LoggingMixin().log
     loger.info(f"Диспетчер 'Семейная аптека' получил задачу: '{name_report}' для '{name_pharm_chain}' из файла '{path}'")
 
+    try:
+        df_head = pd.read_excel(path, header=None, nrows=1)
+        if not df_head.empty:
+            first_val = str(df_head.iloc[0, 0]).strip()
+            if "Отчёт о закупках товара" in first_val:
+                loger.info("Тип отчета определен по заголовку: Закупки")
+                return extract_purchases(path, 'Закупки', name_pharm_chain)
+            elif "Приход и продажи товаров" in first_val:
+                loger.info("Тип отчета определен по заголовку: Приход и продажи (Продажи+Остатки)")
+                return extract_sales_and_remains(path, 'Продажи+Остатки', name_pharm_chain)
+    except Exception as e:
+        loger.warning(f"Ошибка при чтении заголовка файла: {e}")
+
     report_type_lower = name_report.lower()
 
     if 'закуп' in report_type_lower:
@@ -183,8 +196,8 @@ def extract_xls(path, name_report, name_pharm_chain) -> dict:
 if __name__ == "__main__":
     main_loger = LoggingMixin().log
     main_loger.info("Запуск локального теста для парсера 'Семейная аптека'.")
-    test_file_path = r'c:\Users\nmankov\Desktop\отчеты_аптек\Семейная аптека (ИП Немчинов)\продажи, остатки\05_2025.xls'
-    test_report_type = 'Продажи'
+    test_file_path = r'c:\Users\nmankov\Desktop\Семейная аптека (ИП Немчинов)\закупки\09_2025.xls'
+    test_report_type = 'Закупки'
 
     if os.path.exists(test_file_path):
         main_loger.info(f"Тестовый файл найден: {test_file_path}")
