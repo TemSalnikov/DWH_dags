@@ -51,7 +51,6 @@ def extract_xls(path='', name_report='Закуп_Остатки_Продажи',
         # Остатки
         'остаток на дату шт': 'stock_quantity', 'остаток, шт.': 'stock_quantity',
         
-        # Общее поле для количества, если отчет разбит на листы
         'кол-во упаковок': 'quantity'
     }
 
@@ -59,7 +58,7 @@ def extract_xls(path='', name_report='Закуп_Остатки_Продажи',
     expected_sheets = ['закупки', 'остатки', 'продажи']
     found_sheets = [s for s in sheet_names if s.lower().strip() in expected_sheets]
 
-    if len(found_sheets) >= 2: # Формат с 3-мя листами
+    if len(found_sheets) >= 2:
         loger.info(f"Обнаружен формат отчета с раздельными листами: {found_sheets}")
         for sheet_name in found_sheets:
             loger.info(f"Обработка листа: '{sheet_name}'")
@@ -94,12 +93,17 @@ def extract_xls(path='', name_report='Закуп_Остатки_Продажи',
             
             all_data.append(df_sheet)
         
-        # Объединение данных с разных листов
         df = pd.concat(all_data, ignore_index=True, sort=False)
         
-    else: # Формат с 1-м листом
-        loger.info("Обнаружен формат отчета с одним листом. Чтение первого листа.")
-        df_raw = pd.read_excel(xls, sheet_name=sheet_names[0], header=None)
+    else:
+        target_sheet = sheet_names[0]
+        if len(sheet_names) > 1:
+            candidates = [s for s in sheet_names if 'отчёт' in s.lower() or 'отчет' in s.lower()]
+            if candidates:
+                target_sheet = candidates[0]
+
+        loger.info(f"Выбран лист для парсинга: '{target_sheet}'")
+        df_raw = pd.read_excel(xls, sheet_name=target_sheet, header=None)
 
         header_row_index = -1
         header_keywords = ['товар', 'склад', 'закупки, шт.', 'продажи, шт.']
@@ -120,18 +124,15 @@ def extract_xls(path='', name_report='Закуп_Остатки_Продажи',
 
     loger.info(f"Успешно обработано {len(df)} строк.")
 
-    # Добавление технических полей
     count_rows = len(df)
     df['uuid_report'] = [str(uuid.uuid4()) for _ in range(count_rows)]
     df['name_pharm_chain'] = name_pharm_chain
-    # Если отчет был с 1 листа, то name_report будет общий, иначе он уже добавлен
     if 'name_report' not in df.columns:
         df['name_report'] = name_report
     df['start_date'] = str(start_date.date())
     df['end_date'] = str(end_date.date())
     df['processed_dttm'] = str(datetime.now())
 
-    # Финальный список колонок
     final_columns = [
         'uuid_report', 'address', 'warehouse_code', 'legal_entity', 'inn', 'supplier',
         'product_code', 'product_name', 'purchase_quantity', 'purchase_sum_no_vat',
@@ -152,7 +153,7 @@ def extract_xls(path='', name_report='Закуп_Остатки_Продажи',
 if __name__ == "__main__":
     main_loger = LoggingMixin().log
     main_loger.info("Запуск локального теста для парсера 'Еаптека'.")
-    test_file = r'C:\Users\nmankov\Desktop\отчеты\ЕАптека\закуп+продажи+ остатки\2024\10_2024.xlsx'
+    test_file = r'c:\Users\nmankov\Desktop\отчеты_аптек\ЕАптека\закуп+продажи+ остатки\2025\09_2025.xlsx'
     
     if os.path.exists(test_file):
         try:
