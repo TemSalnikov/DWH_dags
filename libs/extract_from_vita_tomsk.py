@@ -4,37 +4,62 @@ import pandas as pd
 from airflow.utils.log.logging_mixin import LoggingMixin
 import hashlib
 import os
+import re
 
 
 def extract_custom(path='', name_report='Закупки', name_pharm_chain='Вита Томск') -> dict:
 
     loger = LoggingMixin().log
     try:
+        xls = pd.ExcelFile(path)
+        target_sheet = xls.sheet_names[0]
+        if len(xls.sheet_names) > 1 and 'TDSheet' in xls.sheet_names:
+            target_sheet = 'TDSheet'
 
-        df_for_date = pd.read_excel(path, header=None, nrows=2)
+        start_date = None
+        end_date = None
+        
         try:
-            date_val = df_for_date.iloc[1, 0]
-            report_date_from_cell = pd.to_datetime('1899-12-30') + pd.to_timedelta(int(date_val), 'D')
-        except (ValueError, TypeError):
-            report_date_from_cell = datetime.strptime(str(date_val), "%d.%m.%Y")
+            df_for_date = pd.read_excel(xls, sheet_name=target_sheet, header=None, nrows=2)
+            if not df_for_date.empty and df_for_date.shape[0] > 1:
+                date_val = df_for_date.iloc[1, 0]
+                if pd.notna(date_val):
+                    try:
+                        report_date_from_cell = pd.to_datetime('1899-12-30') + pd.to_timedelta(int(date_val), 'D')
+                    except (ValueError, TypeError):
+                        report_date_from_cell = datetime.strptime(str(date_val), "%d.%m.%Y")
+                    start_date = report_date_from_cell.replace(day=1)
+                    end_date = start_date + pd.offsets.MonthEnd(1)
+                    loger.info(f"Определен период отчета из ячейки: {start_date.date()} - {end_date.date()}")
+        except Exception as e:
+            loger.warning(f"Не удалось определить дату из ячейки: {e}")
 
-        start_date = report_date_from_cell.replace(day=1)
-        end_date = start_date + pd.offsets.MonthEnd(1)
-        loger.info(f"Определен период отчета из ячейки: {start_date.date()} - {end_date.date()}")
+        if start_date is None:
+            filename = os.path.basename(path)
+            match = re.search(r'(\d{2})_(\d{4})', filename)
+            if match:
+                report_date = datetime.strptime(f"{match.group(1)}_{match.group(2)}", "%m_%Y")
+            else:
+                date_part = os.path.splitext(filename)[0]
+                report_date = datetime.strptime(date_part, "%m_%Y")
+            
+            start_date = report_date.replace(day=1)
+            end_date = start_date + pd.offsets.MonthEnd(1)
+            loger.info(f"Определен период отчета по имени файла: {start_date.date()} - {end_date.date()}")
 
-        df = pd.read_excel(path, header=0, dtype=str)
+        df = pd.read_excel(xls, sheet_name=target_sheet, header=0, dtype=str)
         df.dropna(how='all', inplace=True)
         loger.info(f'Успешно получено {len(df)} строк!')
         rename_map = {
             'Период отчета': 'report_period',
-            'ЕКН': 'ekn',  # или 'ekn' если нужна точная аналогия
+            'ЕКН': 'ekn', 
             'Товар': 'product',
             'Закуп шт.': 'quantity',
             'Закуп сумма с НДС': 'purchase_amount_with_vat',
             'Продажи шт.': 'sales_quantity',
             'Остаток на конец периода шт.': 'balance_end_period_quantity',
             'Текущий остаток шт.': 'current_balance_quantity',
-            'ИНН Юр.лица': 'legal_entity_inn',  # возможно это опечатка или разделитель
+            'ИНН Юр.лица': 'legal_entity_inn',
             'Юр.лицо': 'legal_entity',
             'Населенный пункт': 'settlement',
             'Адрес аптеки': 'pharmacy_address',
@@ -174,8 +199,8 @@ def extract_xls(path, name_report, name_pharm_chain) -> dict:
 
 if __name__ == "__main__":
     main_loger = LoggingMixin().log
-    test_file_path = r'C:\Users\nmankov\Desktop\отчеты\Вита Томск\Продажи\2025\02_2025.xlsx'
-    report_type_to_test = 'Продажи'
+    test_file_path = r'c:\Users\nmankov\Desktop\отчеты_аптек\Вита Томск\Закуп\2025\05_2025.xlsx'
+    report_type_to_test = 'Закупки'
     pharm_chain_name = 'Вита Томск'
 
     if os.path.exists(test_file_path):
