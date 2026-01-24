@@ -27,18 +27,18 @@ default_args = {
 
 
 @dag(
-    dag_id='cf_xls_kafka_mart_fpc_asna_all',
+    dag_id='cf_xls_kafka_mart_fpc_elifant_all',
     default_args=default_args,
     schedule_interval=None,
     catchup=False,
-    params = {'directory': '/opt/airflow/data/АСНА/Закуп Продажи/',
-              'name_report': 'Закуп_Продажи',
-              'name_pharm_chain': 'Асна',
-              'prefix_topic': 'fpc_asna'
+    params = {'directory': '/opt/airflow/data/Элифант/Закупки, продажи, остатки/',
+              'name_report': 'Закуп_Продажи_Остатки',
+              'name_pharm_chain': 'Элифант',
+              'prefix_topic': 'fpc_elifant'
             },
-    tags=['advanced', 'asna']
+    tags=['advanced', 'elifant']
 )
-def cf_xls_kafka_mart_fpc_asna_all():
+def cf_xls_kafka_mart_fpc_elifant_all():
     @task
     def check_data_availability() -> bool:
         # Проверяет готовность данных (пример реализации).
@@ -150,4 +150,4 @@ def cf_xls_kafka_mart_fpc_asna_all():
     processing_files = get_files_for_processing(processinf_folders, meta_files, files)
     trigger_or_skip(parametrs, processing_files)
 
-cf_xls_kafka_mart_fpc_asna_all()
+cf_xls_kafka_mart_fpc_elifant_all()

@@ -14,48 +14,37 @@ import file_processing
 
 default_args = {
     'owner': 'artem_s',
-    'depends_on_past': False,  # Задачи не зависят от прошлых запусков
+    'depends_on_past': False,
     'start_date': datetime(2025, 1, 1),
     'email': ['twindt@mail.ru'],
-    'email_on_failure': False,  # Не Отправлять email при ошибке
-    'email_on_retry': False,   # Не отправлять при ретрае
-    'retries': 0,             # 2 попытки при ошибке
-    'retry_delay': timedelta(minutes=5),  # Ждать 5 минут перед ретраем
-    'execution_timeout': timedelta(minutes=30),  # Макс. время выполнения задачи
+    'email_on_failure': False,
+    'email_on_retry': False,
+    'retries': 0,
+    'retry_delay': timedelta(minutes=5),
+    'execution_timeout': timedelta(minutes=30),
     'provide_context': True
 }
 
-
 @dag(
-    dag_id='cf_xls_kafka_mart_fpc_asna_all',
+    dag_id='cf_xls_kafka_mart_fpc_zhivika_remain',
     default_args=default_args,
     schedule_interval=None,
     catchup=False,
-    params = {'directory': '/opt/airflow/data/АСНА/Закуп Продажи/',
-              'name_report': 'Закуп_Продажи',
-              'name_pharm_chain': 'Асна',
-              'prefix_topic': 'fpc_asna'
+    params = {'directory': '/opt/airflow/data/Живика/остатки/',
+              'name_report': 'Остатки',
+              'name_pharm_chain': 'Живика',
+              'prefix_topic': 'fpc_zhivika'
             },
-    tags=['advanced', 'asna']
+    tags=['advanced', 'zhivika']
 )
-def cf_xls_kafka_mart_fpc_asna_all():
+def cf_xls_kafka_mart_fpc_zhivika_remain():
     @task
     def check_data_availability() -> bool:
-        # Проверяет готовность данных (пример реализации).
-        # Возвращает True если данные готовы.
-
-        # Здесь может быть проверка файлов, запрос к API или БД
-        # Для примера просто возвращаем True
         return True
     @task
     def prepare_parameters(data_ready: bool, **context) -> Optional[Dict]:
-
-        # Получаем параметры DAG
         if data_ready:
-            # Получаем параметры из контекста выполнения
             dag_run_conf = context["dag_run"].conf if "dag_run" in context else {}
-
-            # Объединяем с параметрами по умолчанию из DAG
             parametrs = {**context["params"], **dag_run_conf}
             return parametrs
         else: raise
@@ -81,14 +70,12 @@ def cf_xls_kafka_mart_fpc_asna_all():
         query = f"""select name_folder from files.folders c
                 join files.directories d on c.id_dir = d.id_dir and d.name_dir = '{parametrs['directory']}'"""
         loger.info(f'Сформирован запрос: {query}')
-        folders = file_processing.get_meta_data(
-            # parametrs['db_config'], 
-            query)
+        folders = file_processing.get_meta_data(query)
         loger.info(f'Получен перечень папок: {folders}')
         return folders
 
     @task
-    def get_meta_files(parametrs:Dict, folders:list)-> Optional[dict]:  # здесь в folders нужно передовать список папок из get_folders, а не get_meta_folders
+    def get_meta_files(parametrs:Dict, folders:list)-> Optional[dict]:
         loger = file_processing.LoggingMixin().log
         files = {}
         for folder in folders:
@@ -97,9 +84,7 @@ def cf_xls_kafka_mart_fpc_asna_all():
                         join files.folders c on f.id_folder = c.id_folder and c.name_folder = '{folder}'
                         join files.directories d on c.id_dir = d.id_dir and d.name_dir = '{parametrs['directory']}' """
             loger.info(f'Сформирован запрос: {query}')
-            files[folder] = file_processing.get_meta_data(
-                # parametrs['db_config'], 
-                query)
+            files[folder] = file_processing.get_meta_data(query)
             loger.info(f'Получен перечень файлов: {files}')
         return files
 
@@ -111,7 +96,7 @@ def cf_xls_kafka_mart_fpc_asna_all():
     def get_files_for_processing(processinf_folders: list, meta_files_dict:dict, files_dict:dict)-> Optional[dict]:
         files = {}
         for folder in processinf_folders:
-            files_list= file_processing.check_new_files(files_dict[folder], meta_files_dict[folder])
+            files_list= file_processing.check_new_files(files_dict[folder], meta_files_dict.get(folder, []))
             if files_list:
                 files[folder] = files_list
 
@@ -150,4 +135,4 @@ def cf_xls_kafka_mart_fpc_asna_all():
     processing_files = get_files_for_processing(processinf_folders, meta_files, files)
     trigger_or_skip(parametrs, processing_files)
 
-cf_xls_kafka_mart_fpc_asna_all()
+cf_xls_kafka_mart_fpc_zhivika_remain()
