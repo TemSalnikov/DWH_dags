@@ -30,7 +30,7 @@ default_args = {
     default_args=default_args,
     schedule_interval=None,
     catchup=False,
-    params = {'directory': '/opt/airflow/data/Фармпомощь Бийск/Закупки/',
+    params = {'directory': '/opt/airflow/data/reports/Фармпомощь Бийск/Закупки/',
               'name_report': 'Закупки',
               'name_pharm_chain': 'Фармпомощь Бийск',
               'prefix_topic': 'fpc_farmpomosch_biysk'

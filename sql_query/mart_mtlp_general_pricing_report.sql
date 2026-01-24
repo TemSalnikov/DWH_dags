@@ -1,6 +1,6 @@
-drop table kafka.mdlp_general_pricing_report on cluster cluster_2S_2R
+drop table kafka.mdlp_general_pricing_report
 
-create table kafka.mdlp_general_pricing_report on cluster cluster_2S_2R
+create table kafka.mdlp_general_pricing_report
 (
 	
 	tin_to_the_issuer text, 
@@ -33,16 +33,16 @@ SETTINGS
 
 
 
-drop VIEW kafka.mdlp_general_pricing_report_mv on cluster cluster_2S_2R 
+drop VIEW kafka.mdlp_general_pricing_report_mv 
 	
-CREATE MATERIALIZED VIEW kafka.mdlp_general_pricing_report_mv on cluster cluster_2S_2R 
+CREATE MATERIALIZED VIEW kafka.mdlp_general_pricing_report_mv 
 TO stg.mart_mdlp_general_pricing_report AS
 SELECT * FROM kafka.mdlp_general_pricing_report;
 
 
-drop table stg.mart_mdlp_general_pricing_report on cluster cluster_2S_2R
+drop table stg.mart_mdlp_general_pricing_report
 
-create table stg.mart_mdlp_general_pricing_report on cluster cluster_2S_2R
+create table stg.mart_mdlp_general_pricing_report
 (
 
 	tin_to_the_issuer text, 

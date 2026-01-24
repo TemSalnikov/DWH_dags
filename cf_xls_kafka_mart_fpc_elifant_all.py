@@ -31,7 +31,7 @@ default_args = {
     default_args=default_args,
     schedule_interval=None,
     catchup=False,
-    params = {'directory': '/opt/airflow/data/Элифант/Закупки, продажи, остатки/',
+    params = {'directory': '/opt/airflow/data/reports/Элифант/Закупки, продажи, остатки/',
               'name_report': 'Закуп_Продажи_Остатки',
               'name_pharm_chain': 'Элифант',
               'prefix_topic': 'fpc_elifant'

@@ -30,7 +30,7 @@ default_args = {
     default_args=default_args,
     schedule_interval=None,
     catchup=False,
-    params = {'directory': '/opt/airflow/data/Фармленд/Остатки/',
+    params = {'directory': '/opt/airflow/data/reports/Фармленд/Остатки/',
               'name_report': 'Остатки',
               'name_pharm_chain': 'Фармленд',
               'prefix_topic': 'fpc_farmland'

@@ -30,7 +30,7 @@ default_args = {
     default_args=default_args,
     schedule_interval=None,
     catchup=False,
-    params = {'directory': '/opt/airflow/data/Формула ФР/Остатки/',
+    params = {'directory': '/opt/airflow/data/reports/Формула ФР/Остатки/',
               'name_report': 'Остатки',
               'name_pharm_chain': 'Формула ФР',
               'prefix_topic': 'fpc_formula_fr'

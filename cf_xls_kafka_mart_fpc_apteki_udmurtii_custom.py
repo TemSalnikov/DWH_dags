@@ -30,7 +30,7 @@ default_args = {
     default_args=default_args,
     schedule_interval=None,
     catchup=False,
-    params = {'directory': '/opt/airflow/data/Аптеки удмуртии(Госаптека)/Закуп+продажи/',
+    params = {'directory': '/opt/airflow/data/reports/Аптеки удмуртии(Госаптека)/Закуп+продажи/',
               'name_report': 'Закуп+Продажи',
               'name_pharm_chain': 'Аптеки Удмуртии (Госаптека)',
               'prefix_topic': 'fpc_udmurtia'

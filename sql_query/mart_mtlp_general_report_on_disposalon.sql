@@ -1,6 +1,6 @@
-drop table kafka.mdlp_general_report_on_disposalon on cluster cluster_2S_2R
+drop table kafka.mdlp_general_report_on_disposalon
 
-create table kafka.mdlp_general_report_on_disposal on cluster cluster_2S_2R
+create table kafka.mdlp_general_report_on_disposal
 (
 	date_of_disposal text, 
 	tin_to_the_issuer text, 
@@ -39,16 +39,16 @@ SETTINGS
     kafka_num_consumers = 1;
 
 
-drop VIEW kafka.mdlp_general_report_on_disposalon_mv on cluster cluster_2S_2R 
+drop VIEW kafka.mdlp_general_report_on_disposalon_mv 
 	
-CREATE MATERIALIZED VIEW kafka.mdlp_general_report_on_disposal_mv on cluster cluster_2S_2R 
+CREATE MATERIALIZED VIEW kafka.mdlp_general_report_on_disposal_mv 
 TO stg.mart_mdlp_general_report_on_disposal AS
 SELECT * FROM kafka.mdlp_general_report_on_disposal;
 
 
-drop table stg.mart_mdlp_general_report_on_disposalon on cluster cluster_2S_2R
+drop table stg.mart_mdlp_general_report_on_disposalon
 
-create table stg.mart_mdlp_general_report_on_disposal on cluster cluster_2S_2R
+create table stg.mart_mdlp_general_report_on_disposal
 (
 	date_of_disposal text, 
 	tin_to_the_issuer text, 

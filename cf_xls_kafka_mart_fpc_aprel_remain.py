@@ -30,7 +30,7 @@ default_args = {
     default_args=default_args,
     schedule_interval=None,
     catchup=False,
-    params = {'directory': '/opt/airflow/data/Апрель/Остатки/',
+    params = {'directory': '/opt/airflow/data/reports/Апрель/Остатки/',
               'name_report': 'Остатки',
               'name_pharm_chain': 'Апрель',
               'prefix_topic': 'fpc_aprel'

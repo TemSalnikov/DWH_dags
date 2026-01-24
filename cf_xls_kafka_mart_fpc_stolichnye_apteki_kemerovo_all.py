@@ -31,7 +31,7 @@ default_args = {
     default_args=default_args,
     schedule_interval=None,
     catchup=False,
-    params = {'directory': '/opt/airflow/data/Столичные аптеки Кемерово/',
+    params = {'directory': '/opt/airflow/data/reports/Столичные аптеки Кемерово/',
               'name_report': 'Закуп_Продажи_Остатки',
               'name_pharm_chain': 'Столичные Аптеки Кемерово',
               'prefix_topic': 'fpc_stolichnye_apteki_kemerovo'

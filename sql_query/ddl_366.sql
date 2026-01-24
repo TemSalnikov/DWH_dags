@@ -1,19 +1,19 @@
-create database stg on cluster cluster_2S_2R
+create database stg
 
-create database dds on cluster cluster_2S_2R
+create database dds
 
-create database bdm on cluster cluster_2S_2R
+create database bdm
 
-create database kafka on cluster cluster_2S_2R
+create database kafka
 
 SELECT * FROM system.clusters WHERE cluster = 'cluster_2S_2R'
 
---drop table stg.mart_fpc_366_drugstor on cluster cluster_2S_2R
+--drop table stg.mart_fpc_366_drugstor
 
 
 
 
-create table stg.mart_fpc_366_drugstor on cluster cluster_2S_2R
+create table stg.mart_fpc_366_drugstor
 (
 	name text,
 	legal_name text,
@@ -25,15 +25,15 @@ create table stg.mart_fpc_366_drugstor on cluster cluster_2S_2R
 engine = ReplacingMergeTree()
 order by (hash_drugstore)
 
-alter TABLE stg.mart_fpc_366_drugstor on cluster cluster_2S_2R
+alter TABLE stg.mart_fpc_366_drugstor
 add column hash_drugstore_addr text;
 
-alter TABLE stg.mart_fpc_366_drugstor on cluster cluster_2S_2R
+alter TABLE stg.mart_fpc_366_drugstor
 MODIFY ORDER BY (hash_drugstore_addr)
 
-drop table kafka.fpc_366_drugstor on cluster cluster_2S_2R
+drop table kafka.fpc_366_drugstor
 
-create table kafka.fpc_366_drugstor on cluster cluster_2S_2R
+create table kafka.fpc_366_drugstor
 (
 	name text,
 	legal_name text,
@@ -51,22 +51,22 @@ SETTINGS
     kafka_format = 'JSONColumns',
     kafka_num_consumers = 1;
 
-alter TABLE kafka.fpc_366_drugstor on cluster cluster_2S_2R
+alter TABLE kafka.fpc_366_drugstor
 add column hash_drugstore_addr text;
 
 
 
-drop VIEW kafka.fpc_366_drugstor_mv on cluster cluster_2S_2R
+drop VIEW kafka.fpc_366_drugstor_mv
 
-CREATE MATERIALIZED VIEW kafka.fpc_366_drugstor_mv on cluster cluster_2S_2R TO stg.mart_fpc_366_drugstor AS
+CREATE MATERIALIZED VIEW kafka.fpc_366_drugstor_mv TO stg.mart_fpc_366_drugstor AS
 SELECT * FROM kafka.fpc_366_drugstor;
 
 select * from stg.mart_fpc_366_drugstor
 
 --
-drop table stg.mart_fpc_366_product on cluster cluster_2S_2R
+drop table stg.mart_fpc_366_product
 
-create table stg.mart_fpc_366_product  on cluster cluster_2S_2R
+create table stg.mart_fpc_366_product 
 (
 	name text,
 	id bigint,
@@ -76,11 +76,11 @@ create table stg.mart_fpc_366_product  on cluster cluster_2S_2R
 engine = ReplacingMergeTree()
 order by (hash_product)
 
-truncate table if exists stg.mart_fpc_366_report on cluster cluster_2S_2R
+truncate table if exists stg.mart_fpc_366_report
 
-drop table kafka.fpc_366_product on cluster cluster_2S_2R
+drop table kafka.fpc_366_product
 
-create table kafka.fpc_366_product on cluster cluster_2S_2R
+create table kafka.fpc_366_product
 (
 	name text,
 	id bigint,
@@ -95,17 +95,17 @@ SETTINGS
     kafka_format = 'JSONColumns',
     kafka_num_consumers = 1;
 
-drop VIEW kafka.fpc_366_product_mv on cluster cluster_2S_2R
+drop VIEW kafka.fpc_366_product_mv
 
-CREATE MATERIALIZED VIEW kafka.fpc_366_product_mv on cluster cluster_2S_2R TO stg.mart_fpc_366_product AS
+CREATE MATERIALIZED VIEW kafka.fpc_366_product_mv TO stg.mart_fpc_366_product AS
 SELECT * FROM kafka.fpc_366_product;
 
 --
-drop table stg.mart_fpc_366_supplier on cluster cluster_2S_2R
+drop table stg.mart_fpc_366_supplier
 
-truncate table stg.mart_fpc_366_report on cluster cluster_2S_2R 
+truncate table stg.mart_fpc_366_report 
 
-create table stg.mart_fpc_366_supplier on cluster cluster_2S_2R
+create table stg.mart_fpc_366_supplier
 (
 	name text,
 	legal_name text,
@@ -117,9 +117,9 @@ create table stg.mart_fpc_366_supplier on cluster cluster_2S_2R
 engine = ReplacingMergeTree()
 order by (hash_suplier)
 
-drop table kafka.fpc_366_supplier on cluster cluster_2S_2R
+drop table kafka.fpc_366_supplier
 
-create table kafka.fpc_366_supplier on cluster cluster_2S_2R
+create table kafka.fpc_366_supplier
 (
 	name text,
 	legal_name text,
@@ -136,15 +136,15 @@ SETTINGS
     kafka_format = 'JSONColumns',
     kafka_num_consumers = 1;
 
-drop VIEW stg.fpc_366_suplier_mv on cluster cluster_2S_2R
+drop VIEW stg.fpc_366_suplier_mv
 
-CREATE MATERIALIZED VIEW kafka.fpc_366_supplier_mv on cluster cluster_2S_2R TO stg.mart_fpc_366_supplier AS
+CREATE MATERIALIZED VIEW kafka.fpc_366_supplier_mv TO stg.mart_fpc_366_supplier AS
 SELECT * FROM kafka.fpc_366_supplier;
 
 --
-drop table stg.mart_fpc_366_report on cluster cluster_2S_2R
+drop table stg.mart_fpc_366_report
 
-create table stg.mart_fpc_366_report on cluster cluster_2S_2R
+create table stg.mart_fpc_366_report
 (
 	uuid_report text,
 	period text,
@@ -158,12 +158,12 @@ create table stg.mart_fpc_366_report on cluster cluster_2S_2R
 engine = ReplacingMergeTree()
 order by (uuid_report)
 
-alter TABLE stg.mart_fpc_366_report on cluster cluster_2S_2R
+alter TABLE stg.mart_fpc_366_report
 add column hash_drugstore_addr text;
 
-drop table kafka.fpc_366_report on cluster cluster_2S_2R
+drop table kafka.fpc_366_report
 
-create table kafka.fpc_366_report on cluster cluster_2S_2R
+create table kafka.fpc_366_report
 (
 	uuid_report text,
 	name_report text,
@@ -188,12 +188,12 @@ SETTINGS
     kafka_handle_error_mode = 'stream',
     kafka_num_consumers = 1;
 
-alter TABLE kafka.fpc_366_report on cluster cluster_2S_2R
+alter TABLE kafka.fpc_366_report
 add column hash_drugstore_addr text;
 
-drop VIEW kafka.fpc_366_report_mv on cluster cluster_2S_2R
+drop VIEW kafka.fpc_366_report_mv
 
-CREATE MATERIALIZED VIEW kafka.fpc_366_report_mv  on cluster cluster_2S_2R TO stg.mart_fpc_366_report AS
+CREATE MATERIALIZED VIEW kafka.fpc_366_report_mv  TO stg.mart_fpc_366_report AS
 SELECT * FROM kafka.fpc_366_report;
 
 select hash_drugstore_addr, count(*) from cluster('cluster_2S_2R', 'stg', 'mart_fpc_366_drugstor')
@@ -207,6 +207,6 @@ select * from cluster('cluster_2S_2R', 'stg', 'mart_fpc_366_product')
 select * from cluster('cluster_2S_2R', 'stg', 'mart_fpc_366_report')  
 where hash_supplier != ''
 
-truncate table stg.mart_fpc_366_report on cluster cluster_2S_2R
+truncate table stg.mart_fpc_366_report
 
-truncate table stg.mart_fpc_366_drugstor on cluster cluster_2S_2R
+truncate table stg.mart_fpc_366_drugstor

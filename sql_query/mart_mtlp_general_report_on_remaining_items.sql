@@ -1,6 +1,6 @@
-drop table kafka.mdlp_general_report_on_remaining_items on cluster cluster_2S_2R
+drop table kafka.mdlp_general_report_on_remaining_items
 
-create table kafka.mdlp_general_report_on_remaining_items on cluster cluster_2S_2R
+create table kafka.mdlp_general_report_on_remaining_items
 (
 	uuid_report text,
 	tin_to_the_issuer text, 
@@ -38,15 +38,15 @@ SETTINGS
     kafka_format = 'JSONColumns',
     kafka_num_consumers = 1;
 
-drop VIEW kafka.mdlp_general_report_on_remaining_items_mv on cluster cluster_2S_2R 
+drop VIEW kafka.mdlp_general_report_on_remaining_items_mv 
 
-CREATE MATERIALIZED VIEW kafka.mdlp_general_report_on_remaining_items_mv on cluster cluster_2S_2R 
+CREATE MATERIALIZED VIEW kafka.mdlp_general_report_on_remaining_items_mv 
 TO stg.mart_mdlp_general_report_on_remaining_items AS
 SELECT * FROM kafka.mdlp_general_report_on_remaining_items;
 
-DROP table stg.mart_mdlp_general_report_on_remaining_items on cluster cluster_2S_2R
+DROP table stg.mart_mdlp_general_report_on_remaining_items
 
-create table stg.mart_mdlp_general_report_on_remaining_items on cluster cluster_2S_2R
+create table stg.mart_mdlp_general_report_on_remaining_items
 (
 	uuid_report text,
 	tin_to_the_issuer text, 

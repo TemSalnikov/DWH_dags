@@ -30,7 +30,7 @@ default_args = {
     default_args=default_args,
     schedule_interval=None,
     catchup=False,
-    params = {'directory': '/opt/airflow/data/Фармея флория/Закуп/',
+    params = {'directory': '/opt/airflow/data/reports/Фармея флория/Закуп/',
               'name_report': 'Закупки',
               'name_pharm_chain': 'Фармея Флория',
               'prefix_topic': 'fpc_farmeya_floriya'

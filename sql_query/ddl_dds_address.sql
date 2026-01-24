@@ -1,4 +1,4 @@
--- CREATE database dds ON CLUSTER cluster_2S_2R
+-- CREATE database dds
 
 -- drop table if exists dds.hub_address
 

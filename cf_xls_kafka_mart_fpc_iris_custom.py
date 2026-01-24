@@ -30,7 +30,7 @@ default_args = {
     default_args=default_args,
     schedule_interval=None,
     catchup=False,
-    params = {'directory': '/opt/airflow/data/Ирис/Закуп/',
+    params = {'directory': '/opt/airflow/data/reports/Ирис/Закуп/',
               'name_report': 'Закупки',
               'name_pharm_chain': 'Ирис',
               'prefix_topic': 'fpc_iris'
