@@ -16,7 +16,6 @@ def _get_dates_from_period_column(df: pd.DataFrame, loger) -> tuple[datetime, da
         if 'period_date' not in df.columns or df['period_date'].isnull().all():
             raise ValueError("Столбец 'period_date' отсутствует или пуст.")
 
-        # Преобразуем столбец в datetime, игнорируя ошибки
         period_dates = pd.to_datetime(df['period_date'], dayfirst=True, errors='coerce')
         period_dates.dropna(inplace=True)
 
@@ -49,6 +48,7 @@ def extract_xls(path: str, name_report: str, name_pharm_chain: str = 'МФО') -
 
         rename_map = {
             'период': 'period_date',
+            'период отчета': 'period_date',
             'код партнера': 'partner_code',
             'клиент': 'client_name',
             'юридическое лицо': 'legal_entity',
@@ -106,8 +106,7 @@ def extract_xls(path: str, name_report: str, name_pharm_chain: str = 'МФО') -
 
 if __name__ == "__main__":
     main_loger = LoggingMixin().log
-    # Укажите путь к вашему тестовому файлу. Создайте его, если он не существует.
-    test_file_path = r'C:\Users\nmankov\Desktop\отчеты\МФО\Закуп Продажи Остатки\2024\12_2024.xlsx'
+    test_file_path = r'c:\Users\nmankov\Desktop\отчеты_аптек\МФО\Закуп Продажи Остатки\2025\09_2025.xlsx'
     if os.path.exists(test_file_path):
         main_loger.info(f"Запуск локального теста для файла: {test_file_path}")
         try:
