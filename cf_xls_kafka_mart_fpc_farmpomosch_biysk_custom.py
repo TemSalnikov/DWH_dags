@@ -28,7 +28,7 @@ default_args = {
 @dag(
     dag_id='cf_xls_kafka_mart_fpc_farmpomosch_biysk_custom',
     default_args=default_args,
-    schedule_interval=None,
+    schedule_interval="@monthly",
     catchup=False,
     params = {'directory': '/opt/airflow/data/reports/Фармпомощь Бийск/Закупки/',
               'name_report': 'Закупки',

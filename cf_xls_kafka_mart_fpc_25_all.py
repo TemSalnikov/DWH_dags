@@ -29,7 +29,7 @@ default_args = {
 @dag(
     dag_id='cf_xls_kafka_mart_fpc_25_all',
     default_args=default_args,
-    schedule_interval=None,
+    schedule_interval="@monthly",
     catchup=False,
     params = {'directory': '/opt/airflow/data/reports/Аптека 25/Остатки+Закуп+Продажи/',
               'name_report': 'Остатки+Закуп+Продажи',

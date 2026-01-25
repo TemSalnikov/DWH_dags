@@ -28,7 +28,7 @@ default_args = {
 @dag(
     dag_id='cf_xls_kafka_mart_fpc_formula_fr_sale',
     default_args=default_args,
-    schedule_interval=None,
+    schedule_interval="@monthly",
     catchup=False,
     params = {'directory': '/opt/airflow/data/reports/Формула ФР/Продажи/',
               'name_report': 'Продажи',
