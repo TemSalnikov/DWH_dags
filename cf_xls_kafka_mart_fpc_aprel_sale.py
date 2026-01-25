@@ -28,9 +28,9 @@ default_args = {
 @dag(
     dag_id='cf_xls_kafka_mart_fpc_aprel_sale',
     default_args=default_args,
-    schedule_interval=None,
+    schedule_interval="@monthly",
     catchup=False,
-    params = {'directory': '/opt/airflow/data/Апрель/Продажи/',
+    params = {'directory': '/opt/airflow/data/reports/Апрель/Продажи/',
               'name_report': 'Продажи',
               'name_pharm_chain': 'Апрель',
               'prefix_topic': 'fpc_aprel'

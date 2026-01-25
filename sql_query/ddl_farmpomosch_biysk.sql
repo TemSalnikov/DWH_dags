@@ -1,9 +1,9 @@
---drop table stg.mart_fpc_farmpomosch_biysk_report on cluster cluster_2S_2R
+--drop table stg.mart_fpc_farmpomosch_biysk_report
     'uuid_report', 'invoice_number', 'doc_date', 'product_name', 'supplier', 
     'pharmacy_name', 'legal_entity', 'price', 'purchase_quantity', 
     'purchase_sum', 'vat', 'quantity',
     'name_report', 'name_pharm_chain', 'start_date', 'end_date', 'processed_dttm'
-create table stg.mart_fpc_farmpomosch_biysk_report on cluster cluster_2S_2R
+create table stg.mart_fpc_farmpomosch_biysk_report
 (
     uuid_report text,
     invoice_number text,
@@ -27,9 +27,9 @@ engine = ReplacingMergeTree()
 order by (uuid_report)
 
 
---drop table kafka.fpc_farmpomosch_biysk_report on cluster cluster_2S_2R
+--drop table kafka.fpc_farmpomosch_biysk_report
 
-create table kafka.fpc_farmpomosch_biysk_report on cluster cluster_2S_2R
+create table kafka.fpc_farmpomosch_biysk_report
 (
     uuid_report text,
     invoice_number text,
@@ -61,8 +61,8 @@ SETTINGS
     kafka_num_consumers = 1;
 
 
---drop VIEW kafka.fpc_farmpomosch_biysk_report_mv on cluster cluster_2S_2R
+--drop VIEW kafka.fpc_farmpomosch_biysk_report_mv
 
-CREATE MATERIALIZED VIEW kafka.fpc_farmpomosch_biysk_report_mv  on cluster cluster_2S_2R TO stg.mart_fpc_farmpomosch_biysk_report AS 
+CREATE MATERIALIZED VIEW kafka.fpc_farmpomosch_biysk_report_mv  TO stg.mart_fpc_farmpomosch_biysk_report AS 
 SELECT * FROM kafka.fpc_farmpomosch_biysk_report;
 

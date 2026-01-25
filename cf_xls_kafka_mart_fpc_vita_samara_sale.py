@@ -28,7 +28,7 @@ default_args = {
 @dag(
     dag_id='cf_xls_kafka_mart_fpc_vita_samara_sale',
     default_args=default_args,
-    schedule_interval=None,
+    schedule_interval="@monthly",
     catchup=False,
     params = {'directory': '/opt/airflow/data/reports/ВИТА Самара/продажи/',
               'name_report': 'Продажи',

@@ -28,9 +28,9 @@ default_args = {
 @dag(
     dag_id='cf_xls_kafka_mart_fpc_farmgarant_remain',
     default_args=default_args,
-    schedule_interval=None,
+    schedule_interval="@monthly",
     catchup=False,
-    params = {'directory': '/opt/airflow/data/Фармгарант/Остатки/',
+    params = {'directory': '/opt/airflow/data/reports/Фармгарант/Остатки/',
               'name_report': 'Остатки',
               'name_pharm_chain': 'Фармгарант',
               'prefix_topic': 'fpc_farmgarant'

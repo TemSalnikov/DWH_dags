@@ -29,7 +29,7 @@ default_args = {
 @dag(
     dag_id='cf_xls_kafka_mart_fpc_apteka_ru_sale',
     default_args=default_args,
-    schedule_interval=None,
+    schedule_interval="@monthly",
     catchup=False,
     params = {'directory': '/opt/airflow/data/reports/Аптека_Ру/Продажи/',
               'name_report': 'Продажи',

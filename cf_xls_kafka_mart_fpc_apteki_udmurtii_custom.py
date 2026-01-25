@@ -28,9 +28,9 @@ default_args = {
 @dag(
     dag_id='cf_xls_kafka_mart_fpc_apteki_udmurtii_custom',
     default_args=default_args,
-    schedule_interval=None,
+    schedule_interval="@monthly",
     catchup=False,
-    params = {'directory': '/opt/airflow/data/Аптеки удмуртии(Госаптека)/Закуп+продажи/',
+    params = {'directory': '/opt/airflow/data/reports/Аптеки удмуртии(Госаптека)/Закуп+продажи/',
               'name_report': 'Закуп+Продажи',
               'name_pharm_chain': 'Аптеки Удмуртии (Госаптека)',
               'prefix_topic': 'fpc_udmurtia'

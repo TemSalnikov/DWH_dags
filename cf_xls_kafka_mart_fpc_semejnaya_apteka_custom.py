@@ -28,9 +28,9 @@ default_args = {
 @dag(
     dag_id='cf_xls_kafka_mart_fpc_semejnaya_apteka_custom',
     default_args=default_args,
-    schedule_interval=None,
+    schedule_interval="@monthly",
     catchup=False,
-    params = {'directory': '/opt/airflow/data/Семейная аптека (ИП Немчинов)/закупки/',
+    params = {'directory': '/opt/airflow/data/reports/Семейная аптека (ИП Немчинов)/закупки/',
               'name_report': 'Закупки',
               'name_pharm_chain': 'Семейная аптека',
               'prefix_topic': 'fpc_semejnaya_apteka'

@@ -1,6 +1,6 @@
---drop table stg.mart_fpc_apteka_ru_report on cluster cluster_2S_2R
+--drop table stg.mart_fpc_apteka_ru_report
 
-create table stg.mart_fpc_apteka_ru_report on cluster cluster_2S_2R
+create table stg.mart_fpc_apteka_ru_report
 (
 	uuid_report text,
 	branch_name text,
@@ -21,9 +21,9 @@ engine = ReplacingMergeTree()
 order by (uuid_report);
 
 
---drop table kafka.fpc_apteka_ru_report on cluster cluster_2S_2R
+--drop table kafka.fpc_apteka_ru_report
 
-create table kafka.fpc_apteka_ru_report on cluster cluster_2S_2R
+create table kafka.fpc_apteka_ru_report
 (
 	uuid_report text,
 	branch_name text,
@@ -52,7 +52,7 @@ SETTINGS
     kafka_num_consumers = 1;
 
 
---drop VIEW kafka.fpc_apteka_ru_report_mv on cluster cluster_2S_2R
+--drop VIEW kafka.fpc_apteka_ru_report_mv
 
-CREATE MATERIALIZED VIEW kafka.fpc_apteka_ru_report_mv on cluster cluster_2S_2R TO stg.mart_fpc_apteka_ru_report AS 
+CREATE MATERIALIZED VIEW kafka.fpc_apteka_ru_report_mv TO stg.mart_fpc_apteka_ru_report AS 
 SELECT * FROM kafka.fpc_apteka_ru_report;

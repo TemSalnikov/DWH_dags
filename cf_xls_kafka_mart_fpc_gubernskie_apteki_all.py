@@ -28,9 +28,9 @@ default_args = {
 @dag(
     dag_id='cf_xls_kafka_mart_fpc_gubernskie_apteki_all',
     default_args=default_args,
-    schedule_interval=None,
+    schedule_interval="@monthly",
     catchup=False,
-    params = {'directory': '/opt/airflow/data/Губернские аптеки/',
+    params = {'directory': '/opt/airflow/data/reports/Губернские аптеки/',
               'name_report': 'Закуп_Продажи_Остатки',
               'name_pharm_chain': 'Губернские аптеки',
               'prefix_topic': 'fpc_gubernskie_apteki'

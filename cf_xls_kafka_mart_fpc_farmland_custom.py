@@ -28,9 +28,9 @@ default_args = {
 @dag(
     dag_id='cf_xls_kafka_mart_fpc_farmland_custom',
     default_args=default_args,
-    schedule_interval=None,
+    schedule_interval="@monthly",
     catchup=False,
-    params = {'directory': '/opt/airflow/data/Фармленд/Закуп/',
+    params = {'directory': '/opt/airflow/data/reports/Фармленд/Закуп/',
               'name_report': 'Закупки',
               'name_pharm_chain': 'Фармленд',
               'prefix_topic': 'fpc_farmland'

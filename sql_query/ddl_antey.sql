@@ -1,5 +1,5 @@
 
-create table stg.mart_fpc_antey_drugstor on cluster cluster_2S_2R
+create table stg.mart_fpc_antey_drugstor
 (
 	drugstore text,
 	inn bigint,
@@ -10,9 +10,9 @@ engine = ReplacingMergeTree()
 order by (hash_drugstore)
 
 
---drop table kafka.fpc_antey_drugstor on cluster cluster_2S_2R
+--drop table kafka.fpc_antey_drugstor
 
-create table kafka.fpc_antey_drugstor on cluster cluster_2S_2R
+create table kafka.fpc_antey_drugstor
 (
 	drugstore text,
 	inn bigint,
@@ -29,16 +29,16 @@ SETTINGS
 
 
 
---drop VIEW kafka.fpc_antey_drugstor_mv on cluster cluster_2S_2R
+--drop VIEW kafka.fpc_antey_drugstor_mv
 
-CREATE MATERIALIZED VIEW kafka.fpc_antey_drugstor_mv on cluster cluster_2S_2R TO stg.mart_fpc_antey_drugstor AS
+CREATE MATERIALIZED VIEW kafka.fpc_antey_drugstor_mv TO stg.mart_fpc_antey_drugstor AS
 SELECT * FROM kafka.fpc_antey_drugstor;
 
 
 --
---drop table stg.mart_fpc_antey_report on cluster cluster_2S_2R
+--drop table stg.mart_fpc_antey_report
 
-create table stg.mart_fpc_antey_report on cluster cluster_2S_2R
+create table stg.mart_fpc_antey_report
 (
 	uuid_report text,
 	product text,
@@ -57,9 +57,9 @@ engine = ReplacingMergeTree()
 order by (uuid_report)
 
 
---drop table kafka.fpc_antey_report on cluster cluster_2S_2R
+--drop table kafka.fpc_antey_report
 
-create table kafka.fpc_antey_report on cluster cluster_2S_2R
+create table kafka.fpc_antey_report
 (
 	uuid_report text,
 	product text,
@@ -86,8 +86,8 @@ SETTINGS
     kafka_num_consumers = 1;
 
 
---drop VIEW kafka.fpc_antey_report_mv on cluster cluster_2S_2R
+--drop VIEW kafka.fpc_antey_report_mv
 
-CREATE MATERIALIZED VIEW kafka.fpc_antey_report_mv  on cluster cluster_2S_2R TO stg.mart_fpc_antey_report AS 
+CREATE MATERIALIZED VIEW kafka.fpc_antey_report_mv  TO stg.mart_fpc_antey_report AS 
 SELECT * FROM kafka.fpc_antey_report;
 
