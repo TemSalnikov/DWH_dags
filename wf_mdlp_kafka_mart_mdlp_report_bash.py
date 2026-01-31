@@ -112,7 +112,7 @@ def save_metadata_to_postgres(**context):
 
 with DAG(
     dag_id='wf_mdlp_kafka_mart_mdlp_report_bash',
-    schedule_interval='0 9 * * 2',
+    schedule_interval='0 9 * * 1',
     start_date=datetime(2023, 1, 1),
     default_args=default_args,
     catchup=False,
