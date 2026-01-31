@@ -173,7 +173,8 @@ def create_report_task(token, report_type, period_type, date_to):
                 "report_id": report_type,
                 "params": {
                     "1026_IC_Period_Type_WM": period_type,
-                    period: str(_calculate_period(period_type, date_to))
+                    period: str(_calculate_period(period_type, date_to)),
+                    '0616_IC_Operation_MDLP_period_all': 'true'
                 }
             }
         print(f'url:{url}')
@@ -271,7 +272,7 @@ def _calculate_period(period_type, date_to):
     if period_type == "IC_Period_Month":
         return dt_date.year * 12 + dt_date.month
     elif period_type == "IC_Period_Week":
-        return int((dt_date.year - 1970) * 52.1786 + dt_date.isocalendar()[1]) - 1
+        return int((dt_date.year - 1970) * 52.1775 + dt_date.isocalendar()[1]) - 1
     else:
         raise ValueError(f"Unsupported period type: {period_type}")
 
