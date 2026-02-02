@@ -158,25 +158,79 @@ def create_report_task(token, report_type, period_type, date_to):
             'Content-Type': 'application/json'}
         
         if period_type == "IC_Period_Month":
-            period = "1027_IC_Period_Month_11_2019"
+            if report_type in ["GENERAL_PRICING_REPORT", "GENERAL_REPORT_ON_DISPOSAL, GENERAL_REPORT_ON_MOVEMENT"]:
+                period = "1027_IC_Period_Month_11_2019"
+                payload = {
+                    "report_id": report_type,
+                    "params": {
+                        "1026_IC_Period_Type_WM": period_type,
+                        period: str(_calculate_period(period_type, date_to))
+                    }
+                }
+            elif report_type == "GENERAL_REPORT_ON_REMAINING_ITEMS":
+                payload = {
+                    "report_id": report_type
+                }
         elif period_type == "IC_Period_Week":
             if report_type in ["GENERAL_PRICING_REPORT", "GENERAL_REPORT_ON_DISPOSAL"]:
                 period = "1028_IC_Period_Week"
+                payload = {
+                    "report_id": report_type,
+                    "params": {
+                        "1026_IC_Period_Type_WM": period_type,
+                        period: str(_calculate_period(period_type, date_to, 1))
+                    }
+                }
             elif report_type == "GENERAL_REPORT_ON_MOVEMENT":
                 period = "1029_IC_Period_Week_now"
-        if report_type == "GENERAL_REPORT_ON_REMAINING_ITEMS":
-            payload = {
-                "report_id": report_type
-            }
-        else:
-            payload = {
-                "report_id": report_type,
-                "params": {
-                    "1026_IC_Period_Type_WM": period_type,
-                    period: str(_calculate_period(period_type, date_to)),
-                    '0616_IC_Operation_MDLP_period_all': 'true'
+                payload = {
+                    "report_id": report_type,
+                    "params": {
+                        "1026_IC_Period_Type_WM": period_type,
+                        period: str(_calculate_period(period_type, date_to, 1))
+                    }
                 }
-            }
+            elif report_type == "GENERAL_REPORT_ON_REMAINING_ITEMS":
+                payload = {
+                    "report_id": report_type
+                }
+        elif period_type == "IC_Period_Daily":
+            if report_type in ["GENERAL_PRICING_REPORT", "GENERAL_REPORT_ON_DISPOSAL"]:
+                period = "1031_IC_Period_Week_all"
+                payload = {
+                    "report_id": report_type,
+                    "params": {
+                        "1026_IC_Period_Type_WM": period_type,
+                        # period: str(_calculate_period(period_type, date_to)),
+                        '0616_IC_Operation_MDLP_period_all': 'true'
+                    }
+                }
+            elif report_type == "GENERAL_REPORT_ON_MOVEMENT":
+                period = "1029_IC_Period_Week_now"
+                payload = {
+                    "report_id": report_type,
+                    "params": {
+                        "1026_IC_Period_Type_WM": period_type,
+                        period: str(_calculate_period(period_type, date_to))
+                    }
+                }
+            elif report_type == "GENERAL_REPORT_ON_REMAINING_ITEMS":
+                payload = {
+                    "report_id": report_type
+                }
+        # if report_type == "GENERAL_REPORT_ON_REMAINING_ITEMS":
+        #     payload = {
+        #         "report_id": report_type
+        #     }
+        # else:
+        #     payload = {
+        #         "report_id": report_type,
+        #         "params": {
+        #             "1026_IC_Period_Type_WM": period_type,
+        #             period: str(_calculate_period(period_type, date_to)),
+        #             '0616_IC_Operation_MDLP_period_all': 'true'
+        #         }
+        #     }
         print(f'url:{url}')
         print(f'headers:{headers}')
         print(f'payload:{payload}')
@@ -209,6 +263,7 @@ def check_report_status(token, task_id):
         
         data = response.json()
         status = data['current_status']
+        print(status)
         # if status == 'COMPLETED':
         #     result_id = _get_result_id(token, task_id)
         #     if result_id:
@@ -264,7 +319,7 @@ def download_report(token, result_id, report_type, date_to):
     
     return file_path
 
-def _calculate_period(period_type, date_to):
+def _calculate_period(period_type, date_to, k=0):
     """Расчет значения периода"""
     from datetime import datetime
     dt_date = datetime.strptime(date_to, '%Y-%m-%d')
@@ -272,7 +327,7 @@ def _calculate_period(period_type, date_to):
     if period_type == "IC_Period_Month":
         return dt_date.year * 12 + dt_date.month
     elif period_type == "IC_Period_Week":
-        return int((dt_date.year - 1970) * 52.1775 + dt_date.isocalendar()[1]) - 1
+        return int((dt_date.year - 1970) * 52.1775 + dt_date.isocalendar()[1]) - k
     else:
         raise ValueError(f"Unsupported period type: {period_type}")
 

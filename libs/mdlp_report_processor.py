@@ -93,38 +93,21 @@ def check_data_inreport(csv_path):
 
 
 
-def process_report(csv_path, report_type, date_to):
+def process_report(csv_path, report_type, date_to, period_type):
     """Обработка отчёта: извлечение, преобразование и отправка в Kafka"""
     try:
-        # # Извлечение из архива
-        # extract_dir = "/tmp/extracted"
-        # os.makedirs(extract_dir, exist_ok=True)
-        
-        # with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-        #     file_list = zip_ref.namelist()
-        #     if not file_list:
-        #         print({"status": "error", "message": "Empty ZIP archive"})
-        #         raise
-                
-        #     csv_filename = file_list[0]
-        #     zip_ref.extract(csv_filename, extract_dir)
-        #     csv_path = os.path.join(extract_dir, csv_filename)
         
         # Чтение CSV
         df = pd.read_csv(csv_path, encoding='utf-8')
         df = df.astype(str)
-        # if df.empty or len(df) < 3:
-        #     res = {"status": "empty", "report_type": report_type, "date_to": date_to}
-        #     print(res)
-        #     # raise
-        #     return False
-        
+
         # Добавление метаданных
         df['type_report'] = report_type
         df['date_to'] = date_to
         df['create_dttm'] = str(datetime.now())
         df['deleted_flag'] = False
         df['uuid_report'] = str(uuid.uuid4())
+        
 
         print(f'columns under translate: {df.columns}')
         
@@ -132,7 +115,20 @@ def process_report(csv_path, report_type, date_to):
         columns= translate_columns(report_type)
         print(f'columns after translate: {columns}')
         df.columns = columns
-        
+        if period_type == "IC_Period_Daily":
+            match  report_type:
+                case "GENERAL_PRICING_REPORT":
+                    print(report_type)
+                case "GENERAL_REPORT_ON_MOVEMENT":
+                    date_report = str(datetime.today()-1)
+                    print (f'Дата выгрузки для отчета {report_type} = date_report')
+                    df = df[df['the_date_of_the_operation']==date_report]
+                case "GENERAL_REPORT_ON_REMAINING_ITEMS":
+                    print(report_type)
+                case "GENERAL_REPORT_ON_DISPOSAL":
+                    date_report = str(datetime.today()-1)
+                    print (f'Дата выгрузки для отчета {report_type} = date_report')
+                    df = df[df['date_of_disposal']==date_report]
         # Отправка в Kafka
         bootstrap_servers = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka1:19092,kafka2:19092,kafka3:19092").split(',')
         producer = create_producer(bootstrap_servers)
