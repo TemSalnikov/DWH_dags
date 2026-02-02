@@ -44,14 +44,6 @@ def init_api_state():
     """Инициализация состояния API перед запуском DAG"""
     # import psycopg2
     try:
-        # conn = psycopg2.connect(
-        #     dbname=os.getenv('POSTGRES_DB', 'airflow'),
-        #     user=os.getenv('POSTGRES_USER', 'airflow'),
-        #     password=os.getenv('POSTGRES_PASSWORD', 'airflow'),
-        #     host=os.getenv('POSTGRES_HOST', 'postgres'),
-        #     port=os.getenv('POSTGRES_PORT', '5432')
-        # )
-        # cur = conn.cursor()
 
         hook = PostgresHook(postgres_conn_id="mdlp_postgres_conn")
         conn = hook.get_conn()
@@ -112,14 +104,16 @@ def save_metadata_to_postgres(**context):
 
 with DAG(
     dag_id='wf_mdlp_kafka_mart_mdlp_report_bash',
-    schedule_interval='0 9 * * 1',
+    schedule_interval='0 9 * * *',
     start_date=datetime(2023, 1, 1),
     default_args=default_args,
     catchup=False,
     params={
         'period_type': Param(
-            "IC_Period_Week",
-            description='Тип периода (IC_Period_Month или IC_Period_Week)'
+            "IC_Period_Daily",
+            description='Тип периода (IC_Period_Month - месячная прогрузка,/n' \
+            'IC_Period_Week недельная прогрузка, прогружаются данные за 2 последние недели и указанную в dates_to,/n' \
+            'IC_Period_Daily - дневная прогрузка)'
         ),
         'dates_to': Param(
             [datetime.today().strftime("%Y-%m-%d")],
@@ -241,42 +235,11 @@ with DAG(
                 )
 
 
-                # if prev_group_end is not None:
-                #     prev_group_end >> create_task
-
                 # Оркестрация внутри группы отчета
                 create_task >> check_status >> download_report >> extract_report >> check_data_report >> skip_check >> process_report
-                # prev_group_end = download_report
+
             
             
-
-            # report_group >> process_report
-
-                
-    # with TaskGroup(group_id='process') as process_group:
-    #     for report_type in REPORT_TYPES:
-    #         # Обработка и отправка в Kafka
-    #         process_report = BashOperator(
-    #             task_id=f'process_{report_type}',
-    #             bash_command=(
-    #                 'python /opt/airflow/dags/libs/mdlp_report_processor.py '
-    #                 f'--zip-path {{{{ ti.xcom_pull(task_ids="download.{report_type}.download_{report_type}") }}}} '
-    #                 f'--report-type {report_type} '
-    #                 '--date-to "{{ params.dates_to[0] }}"'
-    #             ),
-    #             do_xcom_push=True
-    #         )
-
-
-
-
-    # # ===== Сохранение метаданных =====
-    # save_metadata = PythonOperator(
-    #     task_id='save_metadata',
-    #     python_callable=save_metadata_to_postgres,
-    #     provide_context=True
-    # )
-
     # ===== Очистка =====
     cleanup = BashOperator(
         task_id='cleanup',
