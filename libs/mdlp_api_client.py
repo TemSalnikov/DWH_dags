@@ -195,13 +195,14 @@ def create_report_task(token, report_type, period_type, date_to):
                     "report_id": report_type
                 }
         elif period_type == "IC_Period_Daily":
+            period_type_in = "IC_Period_Week"
             if report_type in ["GENERAL_PRICING_REPORT", "GENERAL_REPORT_ON_DISPOSAL"]:
                 period = "1031_IC_Period_Week_all"
                 payload = {
                     "report_id": report_type,
                     "params": {
-                        "1026_IC_Period_Type_WM": period_type,
-                        # period: str(_calculate_period(period_type, date_to)),
+                        "1026_IC_Period_Type_WM": period_type_in,
+                        # period: str(_calculate_period(period_type_in, date_to)),
                         '0616_IC_Operation_MDLP_period_all': 'true'
                     }
                 }
@@ -210,8 +211,8 @@ def create_report_task(token, report_type, period_type, date_to):
                 payload = {
                     "report_id": report_type,
                     "params": {
-                        "1026_IC_Period_Type_WM": period_type,
-                        period: str(_calculate_period(period_type, date_to))
+                        "1026_IC_Period_Type_WM": period_type_in,
+                        period: str(_calculate_period(period_type_in, date_to))
                     }
                 }
             elif report_type == "GENERAL_REPORT_ON_REMAINING_ITEMS":
