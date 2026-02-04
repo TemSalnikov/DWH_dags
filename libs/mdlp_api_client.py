@@ -202,7 +202,7 @@ def create_report_task(token, report_type, period_type, date_to):
                     "report_id": report_type,
                     "params": {
                         "1026_IC_Period_Type_WM": period_type_in,
-                        # period: str(_calculate_period(period_type_in, date_to)),
+                        period: str(_calculate_period(period_type_in, date_to)),
                         '0616_IC_Operation_MDLP_period_all': 'true'
                     }
                 }
