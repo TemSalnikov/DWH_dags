@@ -235,7 +235,8 @@ with DAG(
                         'python /opt/airflow/dags/libs/mdlp_report_processor.py process_report '
                         f'--csv-path {{{{ ti.xcom_pull(task_ids="process.{report_type}.extract_{report_type}") }}}} '
                         f'--report-type {report_type} '
-                        '--date-to "{{ params.dates_to[0] }}"'
+                        '--date-to "{{ params.dates_to[0] }}" '
+                        '--period-type {{ params.period_type }}'
                     ),
                     do_xcom_push=True
                 )
