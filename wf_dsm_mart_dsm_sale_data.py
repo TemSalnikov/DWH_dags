@@ -3,6 +3,7 @@ from airflow.utils.log.logging_mixin import LoggingMixin
 from airflow.decorators import dag, task
 from airflow.utils.dates import days_ago
 import pandas as pd
+from datetime import datetime
 
 from airflow.models import Param
 import pendulum
@@ -22,7 +23,8 @@ logger = LoggingMixin().log
 
 @dag(
     dag_id='wf_dsm_mart_dsm_sale_data',
-    start_date=days_ago(1),
+    start_date=datetime(2025, 11, 6),
+    schedule_interval=None,
     catchup=False,
     params={
         'loading_month': Param(

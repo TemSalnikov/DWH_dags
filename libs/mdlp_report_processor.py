@@ -3,7 +3,7 @@ import sys
 import zipfile
 import pandas as pd
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from deep_translator import GoogleTranslator
 import argparse
 import uuid
@@ -120,13 +120,13 @@ def process_report(csv_path, report_type, date_to, period_type):
                 case "GENERAL_PRICING_REPORT":
                     print(report_type)
                 case "GENERAL_REPORT_ON_MOVEMENT":
-                    date_report = str(datetime.today()-1)
+                    date_report = str(datetime.today()-timedelta(days=1))
                     print (f'Дата выгрузки для отчета {report_type} = date_report')
                     df = df[df['the_date_of_the_operation']==date_report]
                 case "GENERAL_REPORT_ON_REMAINING_ITEMS":
                     print(report_type)
                 case "GENERAL_REPORT_ON_DISPOSAL":
-                    date_report = str(datetime.today()-1)
+                    date_report = str(datetime.today()-timedelta(days=1))
                     print (f'Дата выгрузки для отчета {report_type} = date_report')
                     df = df[df['date_of_disposal']==date_report]
         # Отправка в Kafka
