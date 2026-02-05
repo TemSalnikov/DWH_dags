@@ -158,6 +158,7 @@ if __name__ == "__main__":
     process_parser.add_argument('--csv-path', required=True)
     process_parser.add_argument('--report-type', required=True)
     process_parser.add_argument('--date-to', required=True)
+    process_parser.add_argument('--period-type', required=True)
 
     extract_parser = subparsers.add_parser('extract_report')
     extract_parser.add_argument('--zip-path', required=True)
@@ -171,7 +172,7 @@ if __name__ == "__main__":
 
     try:
         if args.command == 'process_report':
-            result = process_report(args.csv_path, args.report_type, args.date_to)
+            result = process_report(args.csv_path, args.report_type, args.date_to, args.period_type)
             print(json.dumps(result))
             
         elif args.command == 'extract_report':

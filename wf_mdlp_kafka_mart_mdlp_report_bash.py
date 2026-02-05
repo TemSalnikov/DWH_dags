@@ -230,7 +230,7 @@ with DAG(
                         f'--csv-path {{{{ ti.xcom_pull(task_ids="process.{report_type}.extract_{report_type}") }}}} '
                         f'--report-type {report_type} '
                         '--date-to "{{ params.dates_to[0] }}" '
-                        '--period-type {{ params.period_type }}'
+                        '--period-type "{{ params.period_type }}"'
                     ),
                     do_xcom_push=True
                 )
