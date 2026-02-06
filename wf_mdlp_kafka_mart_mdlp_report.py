@@ -103,7 +103,7 @@ def save_metadata_to_postgres(**context):
     return f"Inserted {len(meta_data)} records"
 
 with DAG(
-    dag_id='wf_mdlp_kafka_mart_mdlp_report_bash',
+    dag_id='wf_mdlp_kafka_mart_mdlp_report',
     schedule_interval='0 9 * * *',
     start_date=datetime(2023, 1, 1),
     default_args=default_args,
