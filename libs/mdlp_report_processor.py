@@ -3,7 +3,7 @@ import sys
 import zipfile
 import pandas as pd
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from deep_translator import GoogleTranslator
 import argparse
 import uuid
@@ -147,7 +147,7 @@ def process_report(csv_path, report_type, date_to, period_type):
                     ch_client = get_clickhouse_client()
                     date_writed = pd.DataFrame(ch_client.execute(f"""select cd_u from mart_dsm_stat_product"""), columns=['cd_u'])
                     ch_client.disconnect()
-                    date_report = str(datetime.today()-1)
+                    date_report = str(datetime.strptime(date_to,'%Y-%m-%d').date()-timedelta(days=1))
                     print (f'Дата выгрузки для отчета {report_type} между {date_writed} и {date_report}')
                     df = df[df['the_date_of_the_operation'].between(date_writed,date_report, inclusive='right')]
                 case "GENERAL_REPORT_ON_REMAINING_ITEMS":
@@ -156,7 +156,7 @@ def process_report(csv_path, report_type, date_to, period_type):
                     ch_client = get_clickhouse_client()
                     date_writed = pd.DataFrame(ch_client.execute(f"""select cd_u from mart_dsm_stat_product"""), columns=['cd_u'])
                     ch_client.disconnect()
-                    date_report = str(datetime.today()-1)
+                    date_report = str(datetime.strptime(date_to,'%Y-%m-%d').date()-timedelta(days=1))
                     print (f'Дата выгрузки для отчета {report_type} между {date_writed} и {date_report}')
                     df = df[df['date_of_disposal'].between(date_writed,date_report, inclusive='right')]
         # Отправка в Kafka
@@ -181,6 +181,8 @@ def process_report(csv_path, report_type, date_to, period_type):
 
 if __name__ == "__main__":
     
+    
+
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest='command', required=True)
 
@@ -217,5 +219,5 @@ if __name__ == "__main__":
         print(json.dumps({"error": str(e)}))
         sys.exit(1)
     
-    # result = process_report(args.zip_path, args.report_type, args.date_to)
+    # result = process_report('~/dev/DWH_dags/libs/file-b2ec0bb4-0284-42ae-988b-093da283ef86.csv', 'GENERAL_REPORT_ON_MOVEMENT', "2026-02-04", "IC_Period_Daily")
     # print(json.dumps(result))

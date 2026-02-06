@@ -77,8 +77,8 @@ def wait_for_dag_completion(dag_id, run_id, check_interval=30, session=None):
 
 @dag(
     dag_id='cf_dsm_mart_dsm_sale_data',
-    schedule_interval='0 9 6 * *', # в 9 утра каждого месяца 6 числа
-    start_date=days_ago(1),
+    schedule_interval='0 10 6 * *', # в 10 утра каждого месяца 6 числа
+    start_date=datetime(2025, 11, 6),
     catchup=False,
     params={
         'dates_from': Param(
