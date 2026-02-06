@@ -12,6 +12,30 @@ import uuid
 sys.path.append(os.path.join(os.path.dirname(__file__), 'libs'))
 from kafka_producer_common_for_xls import create_producer, send_dataframe
 
+from clickhouse_driver import Client
+from clickhouse_driver.errors import Error as ClickhouseError
+
+CLICKHOUSE_CONN: dict[str, str | int] = {
+    'host': 'clickhouse01',
+    'port': 9000,
+    'user': 'admin',
+    'password': 'admin'
+}
+
+
+def get_clickhouse_client()-> Clien:
+    """Создание клиента ClickHouse"""
+    try:
+        return Client(
+        host=CLICKHOUSE_CONN['host'],
+        port=CLICKHOUSE_CONN['port'],
+        user=CLICKHOUSE_CONN['user'],
+        password=CLICKHOUSE_CONN['password']
+    )
+    except ClickhouseError as e:
+        print(f"Ошибка подключения к ClickHouse: {e}")
+        raise
+
 def translate_columns(columns):
     """Перевод названий столбцов с русского на английский"""
     translated = []
@@ -120,15 +144,21 @@ def process_report(csv_path, report_type, date_to, period_type):
                 case "GENERAL_PRICING_REPORT":
                     print(report_type)
                 case "GENERAL_REPORT_ON_MOVEMENT":
+                    ch_client = get_clickhouse_client()
+                    date_writed = pd.DataFrame(ch_client.execute(f"""select cd_u from mart_dsm_stat_product"""), columns=['cd_u'])
+                    ch_client.disconnect()
                     date_report = str(datetime.today()-1)
-                    print (f'Дата выгрузки для отчета {report_type} = date_report')
-                    df = df[df['the_date_of_the_operation']==date_report]
+                    print (f'Дата выгрузки для отчета {report_type} между {date_writed} и {date_report}')
+                    df = df[df['the_date_of_the_operation'].between(date_writed,date_report, inclusive='right')]
                 case "GENERAL_REPORT_ON_REMAINING_ITEMS":
                     print(report_type)
                 case "GENERAL_REPORT_ON_DISPOSAL":
+                    ch_client = get_clickhouse_client()
+                    date_writed = pd.DataFrame(ch_client.execute(f"""select cd_u from mart_dsm_stat_product"""), columns=['cd_u'])
+                    ch_client.disconnect()
                     date_report = str(datetime.today()-1)
-                    print (f'Дата выгрузки для отчета {report_type} = date_report')
-                    df = df[df['date_of_disposal']==date_report]
+                    print (f'Дата выгрузки для отчета {report_type} между {date_writed} и {date_report}')
+                    df = df[df['date_of_disposal'].between(date_writed,date_report, inclusive='right')]
         # Отправка в Kafka
         bootstrap_servers = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka1:19092,kafka2:19092,kafka3:19092").split(',')
         producer = create_producer(bootstrap_servers)
